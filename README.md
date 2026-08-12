@@ -44,21 +44,26 @@ Enforced at the API level, not just in the UI:
 
 
 
-Three decisions shape the schema:
+**Status:** Schema design complete, migrated to cloud Postgres. Backend implementation in progress.
 
-- **`Membership`, not `User`, is what everything else attaches to.** An
-  intern's identity within a cohort is a `Membership` row. This is what
-  makes multi-cohort support (a person joining a future batch) work without
-  merging their history together.
-- **`Week` is a table, not an integer column.** Tasks, check-ins, feedback,
-  and LinkedIn posts are all "per week" — a real `Week` row owned by a
-  `Cohort` gives all of them one shared, queryable time axis.
-- **`Task` and `TaskAssignment` are separate.** A `Task` is the content,
-  written once by the mentor. A `TaskAssignment` is one intern's copy of it,
-  carrying that intern's status. This is what makes the completion-rate
-  dashboard a single query instead of a mess of duplicated task rows.
 
-`schema.prisma` has not been written yet — this is the sketch stage.
+## Data model
+
+Ten models. Full ERD: [`docs/erd.svg`](docs/erd.svg) — generated from `schema.prisma` via `prisma-erd-generator`, so it stays in sync with the real schema.
+
+| Model | Purpose |
+|---|---|
+| `User` | Anyone who logs in, with a `Role` enum |
+| `Cohort` | One batch of interns |
+| `Membership` | One person's enrollment in one cohort |
+| `Task` | The instruction, written once by the mentor |
+| `TaskAssignment` | One intern's copy of a task, carrying their status |
+| `TaskActivity` | Running update thread on one assignment |
+| `Submission` | A finished deliverable |
+| `Attachment` | File metadata on a submission |
+| `Attendance` | One row per clock event |
+| `Feedback` | Weekly 1–5 rating with comment |
+| `LinkedInPost` | A logged LinkedIn post |
 
 ## Project structure
 
@@ -116,10 +121,13 @@ npm run dev
 - [x] Requirements broken down into epics and user stories
 - [x] Initial ERD sketch
 - [x] Repo initialized
-- [ ] `schema.prisma` written and migrated
+- [x] `schema.prisma` written and migrated
 - [ ] Seed data
 - [ ] Auth (`withAuth`, JWT issuing/verification)
-- [ ] API routes per epic
+- [ ] API routes
 - [ ] Frontend
 - [ ] AI task drafting
 - [ ] Deployed to Vercel
+
+
+
