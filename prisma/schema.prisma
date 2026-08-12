@@ -1,7 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Intern Management Platform — Prisma schema
+// Revised after mentor feedback: Week and CheckIn removed,
+// Attendance and TaskActivity added.
 
 generator client {
   provider = "prisma-client"
@@ -25,12 +24,11 @@ model User {
   name         String
   role         Role     @default(INTERN)
   createdAt    DateTime @default(now())
-  
 
-  memberships           Membership[]
-  createdTasks          Task[]       @relation("TaskAuthor")
-  givenFeedback         Feedback[]   @relation("FeedbackAuthor")
-  
+  memberships   Membership[]
+  createdTasks  Task[]         @relation("TaskAuthor")
+  givenFeedback Feedback[]     @relation("FeedbackAuthor")
+  activities    TaskActivity[] @relation("ActivityAuthor")
 }
 
 model Cohort {
@@ -40,48 +38,28 @@ model Cohort {
   endDate   DateTime
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-  
 
   memberships Membership[]
-  weeks       Week[]
 }
 
-
 model Membership {
-  id        String   @id @default(uuid())
-  userId    String
-  cohortId  String
-  isActive  Boolean  @default(true)
-  joinedAt  DateTime @default(now())
-  
+  id       String   @id @default(uuid())
+  userId   String
+  cohortId String
+  isActive Boolean  @default(true)
+  joinedAt DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id])
   cohort Cohort @relation(fields: [cohortId], references: [id])
 
   assignments   TaskAssignment[]
-  checkIns      CheckIn[]
+  attendance    Attendance[]
   feedback      Feedback[]
   linkedInPosts LinkedInPost[]
 
   @@unique([userId, cohortId])
 }
-
-model Week {
-  id         String   @id @default(uuid())
-  cohortId   String
-  weekNumber Int
-  startDate  DateTime
-  endDate    DateTime
-
-  cohort Cohort @relation(fields: [cohortId], references: [id])
-
-  tasks         Task[]
-  checkIns      CheckIn[]
-  feedback      Feedback[]
-  linkedInPosts LinkedInPost[]
-
-  @@unique([cohortId, weekNumber])
-}
+ 
 
 enum TaskState {
   DRAFT
@@ -90,28 +68,29 @@ enum TaskState {
 
 model Task {
   id          String    @id @default(uuid())
-  weekId      String
+  cohortId    String
   createdById String
   title       String
   description String
   state       TaskState @default(DRAFT)
   aiGenerated Boolean   @default(false)
-  dueDate     DateTime?
+  startDate   DateTime?
+  endDate     DateTime? 
   createdAt   DateTime  @default(now())
 
-  week      Week @relation(fields: [weekId], references: [id])
   createdBy User @relation("TaskAuthor", fields: [createdById], references: [id])
 
   assignments TaskAssignment[]
-}
 
+  @@index([cohortId])
+}
 
 enum AssignmentStatus {
   NOT_STARTED
   IN_PROGRESS
   BLOCKED
-  SUBMITTED     // intern's ceiling — "ready for review"
-  COMPLETED     // mentor only
+  SUBMITTED // intern's ceiling — "ready for review"
+  COMPLETED // mentor only
 }
 
 model TaskAssignment {
@@ -126,11 +105,25 @@ model TaskAssignment {
   membership Membership @relation(fields: [membershipId], references: [id])
 
   submissions Submission[]
+  activities  TaskActivity[]
 
   @@unique([taskId, membershipId])
-  @@index([membershipId])
   @@index([taskId])
+  @@index([membershipId])
+}
 
+model TaskActivity {
+  id           String   @id @default(uuid())
+  assignmentId String
+  authorId     String
+  content      String
+  links        String[]
+  createdAt    DateTime @default(now())
+
+  assignment TaskAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  author     User           @relation("ActivityAuthor", fields: [authorId], references: [id])
+
+  @@index([assignmentId])
 }
 
 model Submission {
@@ -139,14 +132,13 @@ model Submission {
   content      String?
   links        String[]
   submittedAt  DateTime  @default(now())
-
-  reviewNote   String?    // mentor's reason if sent back
+  reviewNote   String? // mentor's reason if sent back
   reviewedAt   DateTime?
-  
 
   assignment  TaskAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   attachments Attachment[]
-  
+
+  @@index([assignmentId])
 }
 
 model Attachment {
@@ -158,63 +150,62 @@ model Attachment {
   fileSize     Int
   uploadedAt   DateTime @default(now())
 
-submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
 }
 
 
+enum AttendanceType {
+  CHECK_IN
+  CHECK_OUT
+  LUNCH_START
+  LUNCH_END
+  AFK_START
+  AFK_END
+  RELAX_START
+  RELAX_END
+}
 
-
-
-
-model CheckIn {
-  id           String   @id @default(uuid())
+model Attendance {
+  id           String         @id @default(uuid())
   membershipId String
-  weekId       String
-  progress     String
-  blockers     String?
-  links        String[]
-  submittedAt  DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  type         AttendanceType
+  occurredAt   DateTime       @default(now())
+  note         String?       // late-checkout reason, relax-mode reason
 
   membership Membership @relation(fields: [membershipId], references: [id])
-  week       Week       @relation(fields: [weekId], references: [id])
-  @@unique([membershipId, weekId])
-  @@index([membershipId])
-  @@index([weekId])
 
+  @@index([membershipId, occurredAt])
 }
 
 
 model Feedback {
   id           String   @id @default(uuid())
   membershipId String
-  weekId       String
   mentorId     String
+  weekNumber   Int
   rating       Int
   comment      String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   membership Membership @relation(fields: [membershipId], references: [id])
-  week       Week       @relation(fields: [weekId], references: [id])
   mentor     User       @relation("FeedbackAuthor", fields: [mentorId], references: [id])
 
-  @@unique([membershipId, weekId])
+  @@unique([membershipId, weekNumber])
   @@index([membershipId])
-  @@index([weekId])
-
 }
 
 model LinkedInPost {
   id           String   @id @default(uuid())
   membershipId String
-  weekId       String
+  weekNumber   Int
   url          String
   loggedAt     DateTime @default(now())
 
   membership Membership @relation(fields: [membershipId], references: [id])
-  week       Week       @relation(fields: [weekId], references: [id])
-  @@index([membershipId])
-  @@index([weekId])
 
+  @@index([membershipId])
+  @@index([weekNumber])
 }
