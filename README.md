@@ -49,7 +49,7 @@ Enforced at the API level, not just in the UI:
 
 ## Data model
 
-Ten models. Full ERD: [`docs/erd.svg`](docs/erd.svg) — generated from `schema.prisma` via `prisma-erd-generator`, so it stays in sync with the real schema.
+Eleven models. Full ERD: [`docs/erd.svg`](docs/erd.svg) — generated from `schema.prisma` via `prisma-erd-generator`, so it stays in sync with the real schema.
 
 | Model | Purpose |
 |---|---|
