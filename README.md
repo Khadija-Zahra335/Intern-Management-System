@@ -9,9 +9,9 @@ Mentors manage batches, assign weekly tasks, review submissions and progress, an
 Two roles, one application:
 
 - **Mentor** — admin-style role. Manages cohorts, assigns tasks, reviews submissions, leaves weekly feedback with a 1–5 rating, and tracks LinkedIn posting cadence across all interns.
-- **Intern** — sees only their own tasks, attendance, feedback, and ratings. Submits work, logs progress, and logs LinkedIn posts.
+- **Intern** — sees only their own tasks, attendance, feedback, and ratings. Submits work, updates progress, logs attendance, and logs LinkedIn posts.
 
-Full functional requirements are in `docs/REQUIREMENTS.md`.
+Full functional requirements are in [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
 
 ## Tech stack
 
@@ -23,36 +23,37 @@ Full functional requirements are in `docs/REQUIREMENTS.md`.
 | Auth | JWT (`jsonwebtoken`), role-based, verified per-route |
 | Validation | Zod |
 | AI | Groq API (Llama) for AI-assisted task drafting |
+| File storage | Cloudinary (submission attachments) |
 | Deployment | Vercel |
 
 ## Status
 
-Schema design complete and migrated to Neon. Authentication and role-based route protection implemented and tested. Feature routes in progress.
+Schema design complete and migrated to Neon. Authentication and role-based route protection implemented and tested. All feature routes — cohorts, membership, tasks, assignments, submissions, attendance, feedback, LinkedIn posts — implemented, seeded with realistic sample data, and verified end-to-end via an importable Postman collection. Attachment uploads (Cloudinary), dashboards, and the frontend are next.
 
 ## Access control
 
 Enforced at the API level, not just in the UI:
 
 - Every route except `/api/auth/register` and `/api/auth/login` requires a valid JWT.
-- Mentor-only routes reject interns with **403 Forbidden**. Missing or invalid tokens return **401 Unauthorized**.
+- Mentor-only routes reject interns with `403 Forbidden`. Missing or invalid tokens return `401 Unauthorized`.
 - Identity is always resolved from the verified token, never from the request body or query string.
-- An intern can only ever read their own tasks, attendance, and feedback. *(Ownership scoping lands with the feature routes.)*
+- Ownership is enforced on every intern-facing route via shared `getOwnedAssignment` and `getOwnedMembership` helpers (`src/lib/ownership.ts`). An intern reaching for a record that isn't theirs gets a `404`, not a `403` — the API never confirms that another intern's record exists in the first place.
+- `403` is reserved for cases where the record is genuinely the caller's own but the specific action isn't allowed for their role — e.g. an intern can see their own assignment but can't set its status to `COMPLETED` (mentor-only).
 
-### Mentor accounts are seeded, not registered
+## Mentor accounts are seeded, not registered
 
 `POST /api/auth/register` creates `INTERN` accounts only — the role is a literal in the create call, so there is no code path that produces a mentor.
 
 Mentor accounts are created by `prisma/seed.ts` from credentials in `.env`, and the credentials are handed over privately. The mentor then logs in through the same endpoint interns use.
 
-This is a deliberate deviation from the task specification, which asked for registration supporting both roles. Without email verification (notifications are out of scope), any self-service mentor signup can be claimed by whoever registers the address first — a guessable address like `mentor@company.com` is a race, not a gate. Seeding closes it permanently and matches how internal admin tools actually work. Reasoning is documented in `docs/LEARNING_OUTCOMES_AUTH.md`.
-
+This is a deliberate deviation from the task specification, which asked for registration supporting both roles. Without email verification (notifications are out of scope), any self-service mentor signup can be claimed by whoever registers the address first — a guessable address like `mentor@company.com` is a race, not a gate. Seeding closes it permanently and matches how internal admin tools actually work.
 ## Auth endpoints
 
 | Method | Route | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | — | Creates an intern account |
-| `POST` | `/api/auth/login` | — | Verifies credentials, returns a JWT |
-| `GET` | `/api/auth/me` | JWT | Returns the current user, read fresh from the database |
+| POST | `/api/auth/register` | — | Creates an intern account |
+| POST | `/api/auth/login` | — | Verifies credentials, returns a JWT |
+| GET | `/api/auth/me` | JWT | Returns the current user, read fresh from the database |
 
 Protected requests send the token as a header:
 
@@ -64,9 +65,41 @@ Tokens carry `{ userId, role }` and expire after 7 days. The payload is readable
 
 `/api/auth/me` deliberately re-reads the user from the database rather than trusting the token payload, since a token is frozen at issue time and a role or account can change within its 7-day life.
 
+## Feature endpoints
+
+| Method | Route | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/cohorts` | Mentor | Create a cohort |
+| GET | `/api/cohorts` | Mentor | List all cohorts |
+| POST | `/api/cohorts/[id]/members` | Mentor | Add an intern to a cohort by email |
+| GET | `/api/cohorts/[id]/members` | Mentor | List a cohort's members |
+| POST | `/api/tasks` | Mentor | Create a task (starts in `DRAFT`) |
+| GET | `/api/tasks` | Mentor | List tasks, optionally filtered by cohort |
+| POST | `/api/tasks/[id]/publish` | Mentor | Publish a task — auto-assigns it to every active member of its cohort in one transaction |
+| GET | `/api/assignments` | Mentor, Intern (own) | List assignments for a membership |
+| PATCH | `/api/assignments/[id]/status` | Mentor, Intern (own) | Update an assignment's status (`COMPLETED` is mentor-only) |
+| POST | `/api/assignments/[id]/activity` | Mentor, Intern (own) | Post a progress note to an assignment's activity thread |
+| GET | `/api/assignments/[id]/activity` | Mentor, Intern (own) | Read an assignment's activity thread |
+| POST | `/api/assignments/[id]/submissions` | Intern (own) | Submit work for review |
+| GET | `/api/assignments/[id]/submissions` | Mentor, Intern (own) | List an assignment's submission history |
+| PATCH | `/api/submissions/[id]/review` | Mentor | Approve or reject a submission |
+| POST | `/api/attendance` | Intern | Log an attendance event (check-in/out, lunch, AFK, relax) |
+| GET | `/api/attendance` | Mentor, Intern (own) | Read attendance history for a membership |
+| POST | `/api/feedback` | Mentor | Give or revise feedback for a membership + week (1–5 rating) |
+| GET | `/api/feedback` | Mentor, Intern (own) | Read feedback history for a membership |
+| POST | `/api/linkedin-posts` | Intern | Log a LinkedIn post for a membership + week |
+| GET | `/api/linkedin-posts` | Mentor, Intern (own) | Read LinkedIn post history for a membership |
+
+A few behaviors worth knowing before calling these:
+
+- **Submissions are single-cycle**: submit → mentor approves (→ `COMPLETED`, locked) or rejects (→ `IN_PROGRESS`, resubmission allowed). No further submissions are accepted once `COMPLETED`.
+- **Feedback is an upsert** keyed on `(membershipId, weekNumber)` — calling it again for the same week revises the existing rating and comment rather than creating a duplicate.
+- **LinkedIn posts allow multiple entries per week** (only exact duplicate URLs are blocked) — counting posting cadence means counting distinct weeks, not rows.
+- **Attendance is stored in UTC.** A checkout after 6 PM PKT requires a note of at least 5 words, enforced server-side via a small PKT-hour helper (`src/lib/timezone.ts`). Hours-worked calculation from these events is not yet implemented.
+
 ## Data model
 
-Eleven models. Full ERD: `docs/erd.svg` — generated from `schema.prisma` via `prisma-erd-generator`, so it stays in sync with the real schema.
+Eleven models. Full ERD: [`docs/erd.svg`](docs/erd.svg) — generated from `schema.prisma` via `prisma-erd-generator`, so it stays in sync with the real schema.
 
 | Model | Purpose |
 |---|---|
@@ -89,7 +122,7 @@ intern-management-platform/
 ├── prisma/
 │   ├── schema.prisma          # 11 models, enums, relations
 │   ├── migrations/            # version-controlled schema history
-│   └── seed.ts                # creates the mentor account
+│   └── seed.ts                # mentor + cohorts + interns + tasks + attendance + feedback + LinkedIn posts
 ├── src/
 │   ├── app/
 │   │   ├── api/
@@ -97,24 +130,39 @@ intern-management-platform/
 │   │   │   │   ├── register/route.ts
 │   │   │   │   ├── login/route.ts
 │   │   │   │   └── me/route.ts
-│   │   │   └── cohorts/route.ts
+│   │   │   ├── cohorts/
+│   │   │   │   ├── route.ts
+│   │   │   │   └── [id]/members/route.ts
+│   │   │   ├── tasks/
+│   │   │   │   ├── route.ts
+│   │   │   │   └── [id]/publish/route.ts
+│   │   │   ├── assignments/
+│   │   │   │   ├── route.ts
+│   │   │   │   └── [id]/
+│   │   │   │       ├── status/route.ts
+│   │   │   │       ├── activity/route.ts
+│   │   │   │       └── submissions/route.ts
+│   │   │   ├── submissions/[id]/review/route.ts
+│   │   │   ├── attendance/route.ts
+│   │   │   ├── feedback/route.ts
+│   │   │   └── linkedin-posts/route.ts
 │   │   ├── (auth)/            # login, register pages
 │   │   └── (dashboard)/       # mentor + intern pages
 │   ├── lib/
 │   │   ├── prisma.ts          # shared Prisma client (hot-reload safe)
 │   │   ├── password.ts        # hashPassword, verifyPassword
-│   │   ├── jwt.ts             # signToken, verifyToken
-│   │   ├── auth.ts            # getUserFromRequest, unauthorized, forbidden
-│   │   └── validators/        # Zod schemas
-│   ├── generated/prisma/      # Prisma client output (gitignored)
+│   │   ├── jwt.ts              # signToken, verifyToken
+│   │   ├── auth.ts             # getUserFromRequest, unauthorized, forbidden
+│   │   ├── ownership.ts        # getOwnedAssignment, getOwnedMembership — shared 404-not-403 checks
+│   │   ├── timezone.ts         # getPktHour — late-checkout rule support
+│   │   └── validators/         # Zod schemas, one file per resource
+│   ├── generated/prisma/       # Prisma client output (gitignored)
 │   └── components/
 ├── docs/
 │   ├── REQUIREMENTS.md
-│   ├── LEARNING_OUTCOMES_WEEK6.md
-│   ├── LEARNING_OUTCOMES_AUTH.md
 │   └── erd.svg
-├── prisma.config.ts           # Prisma 7 — CLI datasource config
-├── .env                       # not committed
+├── prisma.config.ts            # Prisma 7 — CLI datasource config
+├── .env                        # not committed
 └── package.json
 ```
 
@@ -128,7 +176,7 @@ npm install
 
 Create `.env`:
 
-```bash
+```env
 # Neon — pooled endpoint, used by the running app
 DATABASE_URL="postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/DB?sslmode=require"
 
@@ -151,14 +199,14 @@ Generate a real secret rather than typing one:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Then set up the database and create the mentor:
+Then set up the database, run migrations, and seed:
 
 ```bash
+npx prisma generate
 npx prisma migrate dev
 npx tsx prisma/seed.ts
 npm run dev          # http://localhost:3000
 ```
-
 
 
 ## Progress log
@@ -170,9 +218,12 @@ npm run dev          # http://localhost:3000
 - [x] Seed script — mentor account
 - [x] Auth — register, login, `/me`, JWT issuing and verification
 - [x] Role-based route protection, verified against intern and mentor tokens
-- [ ] Feature routes — cohorts, tasks, attendance, feedback, LinkedIn
-- [ ] Ownership scoping on intern-facing routes
+- [x] Feature routes — cohorts, membership, tasks, assignments, submissions, attendance, feedback, LinkedIn posts
+- [x] Ownership scoping on intern-facing routes (404-not-403)
+- [x] Seed data — realistic multi-cohort dataset
+- [x] Postman collection — full endpoint coverage, happy path + negative cases
+- [ ] Submission attachments (Cloudinary)
+- [ ] Dashboards — mentor cohort view, per-intern progress
 - [ ] Frontend
 - [ ] AI task drafting
 - [ ] Deployed to Vercel
-
