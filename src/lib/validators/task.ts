@@ -1,0 +1,17 @@
+// src/lib/validators/task.ts
+import { z } from "zod";
+
+export const createTaskSchema = z
+  .object({
+    cohortId: z.string().uuid(),
+    title: z.string().min(1),
+    description: z.string().min(1),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
+  })
+  .refine((data) => data.endDate > data.startDate, {
+    message: "endDate must be after startDate",
+    path: ["endDate"],
+  });
+
+export type CreateTaskInput = z.infer<typeof createTaskSchema>;
