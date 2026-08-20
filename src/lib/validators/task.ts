@@ -9,9 +9,18 @@ export const createTaskSchema = z
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
   })
+
+  
   .refine((data) => data.endDate > data.startDate, {
     message: "endDate must be after startDate",
     path: ["endDate"],
   });
+
+  export const updateTaskSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+});
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
