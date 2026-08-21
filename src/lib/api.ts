@@ -32,6 +32,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 function extractErrorMessage(body: any): string {
+    if (Array.isArray(body?.issues) && body.issues.length > 0 && body.issues[0]?.message) {
+    return String(body.issues[0].message);
+  }
   if (!body || !body.error) return "Request failed";
   if (typeof body.error === "string") return body.error;
 
@@ -68,6 +71,13 @@ export function login(email: string, password: string) {
   return request<{ token: string; user: User }>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
+  });
+}
+
+export function register(name: string, email: string, password: string) {
+  return request<{ user: User }>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password }),
   });
 }
 
@@ -182,8 +192,8 @@ export type Assignment = {
   task: {
     title: string;
     description: string;
-    startDate: string;
-    endDate: string;
+    startDate: string | null;
+    endDate: string | null;
   };
 };
 
@@ -200,6 +210,7 @@ export type Submission = {
   submittedAt: string;
   reviewNote: string | null;
   reviewedAt: string | null;
+  attachments?: Attachment[];
 };
 
 export function getSubmissions(assignmentId: string) {
@@ -242,3 +253,163 @@ export function giveFeedback(input: {
 export function getFeedback(membershipId: string) {
   return request<Feedback[]>(`/feedback?membershipId=${membershipId}`);
 }
+
+// ---- Attendance endpoints ----
+export type AttendanceType =
+  | "CHECK_IN"
+  | "CHECK_OUT"
+  | "LUNCH_START"
+  | "LUNCH_END"
+  | "AFK_START"
+  | "AFK_END"
+  | "RELAX_START"
+  | "RELAX_END";
+
+export type Attendance = {
+  id: string;
+  membershipId: string;
+  type: AttendanceType;
+  occurredAt: string;
+  note: string | null;
+};
+
+export function getAttendance(membershipId: string) {
+  return request<Attendance[]>(`/attendance?membershipId=${membershipId}`);
+}
+
+// ---- Task activity endpoints ----
+export type Activity = {
+  id: string;
+  assignmentId: string;
+  authorId: string;
+  content: string;
+  links: string[];
+  createdAt: string;
+  author: { id: string; name: string; role: "MENTOR" | "INTERN" };
+};
+
+export function getActivity(assignmentId: string) {
+  return request<Activity[]>(`/assignment/${assignmentId}/activity`);
+}
+
+export function postActivity(assignmentId: string, input: { content: string; links?: string[] }) {
+  return request<unknown>(`/assignment/${assignmentId}/activity`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+
+// ---- Cohort progress endpoint ----
+export type MemberProgress = {
+  membershipId: string;
+  user: { id: string; name: string; email: string };
+  isActive: boolean;
+  taskCompletion: { total: number; completed: number; percent: number };
+  linkedInWeeksLogged: number;
+  latestRating: { weekNumber: number; rating: number } | null;
+  ratingHistory: { weekNumber: number; rating: number }[];
+};
+
+export function getCohortProgress(cohortId: string) {
+  return request<MemberProgress[]>(`/cohorts/${cohortId}/progress`);
+}
+
+// ---- LinkedIn post endpoints ----
+export type LinkedInPost = {
+  id: string;
+  membershipId: string;
+  weekNumber: number;
+  url: string;
+  loggedAt: string;
+};
+
+export function getLinkedInPosts(membershipId: string) {
+  return request<LinkedInPost[]>(`/linkedIn-posts?membershipId=${membershipId}`);
+}
+
+export function logLinkedInPost(input: { membershipId: string; weekNumber: number; url: string }) {
+  return request<LinkedInPost>("/linkedIn-posts", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+
+export type MyMembership = {
+  id: string;
+  userId: string;
+  cohortId: string;
+  isActive: boolean;
+  joinedAt: string;
+  cohort: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  };
+};
+
+export function getMyMemberships() {
+  return request<MyMembership[]>("/me/memberships");
+}
+export function logAttendance(input: { membershipId: string; type: AttendanceType; note?: string }) {
+  return request<Attendance>("/attendance", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+export function createSubmission(assignmentId: string, input: { content?: string; links?: string[] }) {
+  return request<Submission>(`/assignment/${assignmentId}/submissions`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateAssignmentStatus(assignmentId: string, status: "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED") {
+  return request<unknown>(`/assignment/${assignmentId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function generateTaskDraft(topic: string) {
+  return request<{ title: string; description: string }>("/tasks/draft", {
+    method: "POST",
+    body: JSON.stringify({ topic }),
+  });
+}
+
+export type Attachment = {
+  id: string;
+  submissionId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  uploadedAt: string;
+};
+
+export function getAttachments(submissionId: string) {
+  return request<Attachment[]>(`/submissions/${submissionId}/attachments`);
+}
+
+export async function uploadAttachment(submissionId: string, file: globalThis.File): Promise<Attachment> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`/api/submissions/${submissionId}/attachments`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(body));
+  }
+
+  return res.json();
+} 

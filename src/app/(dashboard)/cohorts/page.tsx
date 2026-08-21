@@ -28,7 +28,7 @@ export default function CohortsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Cohorts</h1>
           <p className="text-sm text-muted">Manage intern batches across time.</p>
@@ -50,21 +50,49 @@ export default function CohortsPage() {
       ) : cohorts.length === 0 ? (
         <p className="text-sm text-muted">No cohorts yet. Create your first one above.</p>
       ) : (
-        <div className="bg-white border border-border rounded-2xl divide-y divide-border overflow-hidden">
-          {cohorts.map((cohort) => (
-            <Link key={cohort.id} href={`/cohorts/${cohort.id}`}
-              className="flex items-center justify-between px-6 py-4 hover:bg-accent-soft transition-colors">
-              <div>
-                <p className="font-semibold text-foreground">{cohort.name}</p>
-                <p className="text-xs text-muted mt-0.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {cohorts.map((cohort) => {
+            const weeks = Math.max(
+              1,
+              Math.round(
+                (new Date(cohort.endDate).getTime() - new Date(cohort.startDate).getTime()) /
+                  (7 * 24 * 60 * 60 * 1000)
+              )
+            );
+
+            return (
+              <Link
+                key={cohort.id}
+                href={`/cohorts/${cohort.id}`}
+                className="group bg-white border border-border rounded-2xl p-6 hover:border-primary hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between mb-5">
+                  <div className="w-11 h-11 rounded-full bg-accent-soft text-primary flex items-center justify-center font-bold text-lg">
+                    {cohort.name.charAt(0).toUpperCase()}
+                  </div>
+                  {cohort.isActive ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-accent-soft text-primary">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-500">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      Archived
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="font-bold text-foreground group-hover:text-primary transition-colors mb-1">
+                  {cohort.name}
+                </h3>
+                <p className="text-sm text-muted mb-3">
                   {new Date(cohort.startDate).toLocaleDateString()} – {new Date(cohort.endDate).toLocaleDateString()}
                 </p>
-              </div>
-              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${cohort.isActive ? "bg-accent-soft text-primary" : "bg-gray-100 text-gray-500"}`}>
-                {cohort.isActive ? "Active" : "Archived"}
-              </span>
-            </Link>
-          ))}
+                <p className="text-xs text-muted">{weeks}-week program</p>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

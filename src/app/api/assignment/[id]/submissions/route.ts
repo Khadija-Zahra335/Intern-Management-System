@@ -63,10 +63,12 @@ export async function GET(
     return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
   }
 
+
   const submissions = await prisma.submission.findMany({
-    where: { assignmentId: id },
-    orderBy: { submittedAt: "desc" },
-  });
+  where: { assignmentId: id },
+  orderBy: { submittedAt: "desc" },
+  include: { attachments: true },
+});
 
   return NextResponse.json(submissions);
 }

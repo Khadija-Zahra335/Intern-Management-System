@@ -151,6 +151,7 @@ model Attachment {
   submissionId String
   fileName     String
   fileUrl      String
+  publicId     String
   fileType     String
   fileSize     Int
   uploadedAt   DateTime @default(now())
@@ -159,7 +160,6 @@ model Attachment {
 
   @@index([submissionId])
 }
-
 
 enum AttendanceType {
   CHECK_IN
