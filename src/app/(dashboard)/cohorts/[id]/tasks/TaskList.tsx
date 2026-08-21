@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { publishTask, updateTask, deleteTask, type Task } from "@/lib/api";
 
+import { MarkdownText, markdownPreview } from "@/components/MarkdownText";
+
 export function TaskList({ tasks, onChange }: { tasks: Task[]; onChange: () => void }) {
   if (tasks.length === 0) {
     return <p className="text-sm text-muted">No tasks yet for this cohort.</p>;
@@ -17,8 +19,9 @@ export function TaskList({ tasks, onChange }: { tasks: Task[]; onChange: () => v
   );
 }
 
-function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
+function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {  
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,7 +68,7 @@ function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
   return (
     <li className="rounded-xl border border-border bg-white p-4">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-medium text-foreground">{task.title}</h3>
             <span
@@ -76,7 +79,24 @@ function TaskRow({ task, onChange }: { task: Task; onChange: () => void }) {
               {task.state}
             </span>
           </div>
-          <p className="text-sm text-muted mt-1">{task.description}</p>
+
+          <div className="mt-1">
+            {expanded ? (
+              <div className="text-sm">
+                <MarkdownText content={task.description} />
+              </div>
+            ) : (
+              <p className="text-sm text-muted">{markdownPreview(task.description)}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-xs font-medium text-primary hover:underline mt-1"
+            >
+              {expanded ? "Hide details" : "Show details"}
+            </button>
+          </div>
+
           <p className="text-xs text-muted mt-2">
             {task.startDate.slice(0, 10)} → {task.endDate.slice(0, 10)}
           </p>
@@ -131,6 +151,7 @@ function EditTaskRow({
   const [endDate, setEndDate] = useState(task.endDate.slice(0, 10));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   async function handleSave() {
     setSaving(true);
@@ -158,12 +179,31 @@ function EditTaskRow({
             onChange={(e) => setTitle(e.target.value)}
             className="w-full rounded-lg border border-border px-3 py-2 text-sm"
           />
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
-          />
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs text-muted">Description</label>
+              <button
+                type="button"
+                onClick={() => setShowPreview((v) => !v)}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                {showPreview ? "Edit raw text" : "Preview formatting"}
+              </button>
+            </div>
+            {showPreview ? (
+              <div className="w-full rounded-lg border border-border px-3 py-2 min-h-[80px] bg-white">
+                <MarkdownText content={description} />
+              </div>
+            ) : (
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={6}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm font-mono"
+              />
+            )}
+          </div>
         </>
       )}
 
