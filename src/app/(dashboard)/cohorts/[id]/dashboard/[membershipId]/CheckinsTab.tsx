@@ -1,155 +1,114 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Assignment, Attendance, Activity, getActivity, postActivity } from "@/lib/api";
+import { Attendance } from "@/lib/api";
+import { WorkHoursChart } from "@/components/WorkHoursChart";
+import { deriveAttendanceState, groupAttendanceByDay, type SessionState } from "@/lib/attendanceHours";
+import { useState } from "react";
 
-const ATTENDANCE_META: Record<string, { label: string; dot: string }> = {
-  CHECK_IN: { label: "Check in", dot: "bg-green-500" },
-  CHECK_OUT: { label: "Check out", dot: "bg-gray-400" },
-  LUNCH_START: { label: "Lunch start", dot: "bg-amber-500" },
-  LUNCH_END: { label: "Lunch end", dot: "bg-amber-300" },
-  AFK_START: { label: "AFK start", dot: "bg-red-400" },
-  AFK_END: { label: "AFK end", dot: "bg-red-300" },
-  RELAX_START: { label: "Relax start", dot: "bg-blue-400" },
-  RELAX_END: { label: "Relax end", dot: "bg-blue-300" },
+const STATE_META: Record<SessionState, { label: string; dot: string; bg: string; text: string }> = {
+  OUT: { label: "Checked Out", dot: "bg-gray-400", bg: "bg-gray-100", text: "text-gray-600" },
+  IN: { label: "Checked In", dot: "bg-green-500", bg: "bg-green-50", text: "text-green-700" },
+  LUNCH: { label: "On Lunch", dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
+  AFK: { label: "AFK", dot: "bg-gray-500", bg: "bg-gray-100", text: "text-gray-600" },
+  RELAX: { label: "On a Break", dot: "bg-blue-500", bg: "bg-blue-50", text: "text-blue-700" },
 };
 
-export function CheckinsTab({ assignments, attendance }: { assignments: Assignment[]; attendance: Attendance[] }) {
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState(assignments.length > 0 ? assignments[0].id : "");
-  const [activity, setActivity] = useState<Activity[]>([]);
-  const [activityLoading, setActivityLoading] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
-  const [posting, setPosting] = useState(false);
-  const [error, setError] = useState("");
+const EVENT_LABEL: Record<string, string> = {
+  CHECK_IN: "Checked In", CHECK_OUT: "Checked Out",
+  LUNCH_START: "Lunch Started", LUNCH_END: "Lunch Ended",
+  AFK_START: "Went AFK", AFK_END: "Back from AFK",
+  RELAX_START: "Break Started", RELAX_END: "Break Ended",
+};
 
-  useEffect(() => {
-    if (!selectedAssignmentId) {
-      setActivity([]);
-      return;
-    }
-    setActivityLoading(true);
-    getActivity(selectedAssignmentId)
-      .then(setActivity)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load activity"))
-      .finally(() => setActivityLoading(false));
-  }, [selectedAssignmentId]);
+const EVENT_DOT: Record<string, string> = {
+  CHECK_IN: "bg-primary", CHECK_OUT: "bg-gray-400",
+  LUNCH_START: "bg-amber-500", LUNCH_END: "bg-amber-300",
+  AFK_START: "bg-gray-500", AFK_END: "bg-gray-300",
+  RELAX_START: "bg-blue-500", RELAX_END: "bg-blue-300",
+};
 
-  async function handlePost() {
-    if (!selectedAssignmentId || !newMessage.trim()) return;
-    setPosting(true);
-    setError("");
-    try {
-      await postActivity(selectedAssignmentId, { content: newMessage.trim() });
-      setNewMessage("");
-      const entries = await getActivity(selectedAssignmentId);
-      setActivity(entries);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to post");
-    } finally {
-      setPosting(false);
-    }
-  }
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+export function CheckinsTab({ attendance }: { attendance: Attendance[] }) {
+  const [showAllHistory, setShowAllHistory] = useState(false);
+
+  const { state, lastEvent } = deriveAttendanceState(attendance);
+  const stateMeta = STATE_META[state];
+  const byDay = groupAttendanceByDay(attendance);
+  const todayKey = new Date().toLocaleDateString("en-CA");
+  const todayRecords = byDay.get(todayKey) ?? [];
+  const pastDays = Array.from(byDay.entries()).filter(([key]) => key !== todayKey).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+  const visiblePastDays = showAllHistory ? pastDays : pastDays.slice(0, 3);
 
   return (
     <div>
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-
-      <h2 className="text-lg font-medium text-foreground mb-3">Attendance</h2>
-
-      {attendance.length === 0 ? (
-        <p className="text-muted mb-8">No attendance logged yet.</p>
-      ) : (
-        <div className="bg-white border border-border rounded-2xl divide-y divide-border overflow-hidden mb-8">
-          {attendance.map((a) => (
-            <div key={a.id} className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-2.5">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${ATTENDANCE_META[a.type]?.dot ?? "bg-gray-400"}`} />
-                <div>
-                  <p className="text-sm font-medium text-foreground">{ATTENDANCE_META[a.type]?.label ?? a.type}</p>
-                  {a.note && <p className="text-xs text-muted mt-0.5">{a.note}</p>}
-                </div>
-              </div>
-              <span className="text-xs text-muted">{new Date(a.occurredAt).toLocaleString()}</span>
-            </div>
-          ))}
+      <div className="bg-white border border-border rounded-2xl p-5 mb-4 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">Current Activity</p>
+          <p className="text-sm text-muted">
+            {lastEvent ? `${EVENT_LABEL[lastEvent.type] ?? lastEvent.type} at ${formatTime(lastEvent.occurredAt)}` : "No activity logged yet"}
+          </p>
         </div>
-      )}
+        <span className={`inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full ${stateMeta.bg} ${stateMeta.text}`}>
+          <span className={`w-2 h-2 rounded-full ${stateMeta.dot}`} />
+          {stateMeta.label}
+        </span>
+      </div>
 
-      <h2 className="text-lg font-medium text-foreground mb-3">Task activity</h2>
+      <div className="mb-4">
+        <WorkHoursChart attendance={attendance} />
+      </div>
 
-      {assignments.length === 0 ? (
-        <p className="text-muted">No tasks assigned yet.</p>
-      ) : (
-        <>
-          <div className="flex gap-2 overflow-x-auto pb-1 mb-4">
-            {assignments.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => setSelectedAssignmentId(a.id)}
-                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                  selectedAssignmentId === a.id
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-foreground border-border hover:border-primary"
-                }`}
-              >
-                {a.task.title}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white border border-border rounded-2xl p-5 sm:col-span-1">
+          <h2 className="text-sm font-bold text-foreground mb-4">Today's Log</h2>
+          {todayRecords.length === 0 ? (
+            <p className="text-sm text-muted">No activity logged today yet.</p>
+          ) : (
+            <div className="relative pl-4">
+              <div className="absolute left-[3px] top-1 bottom-1 w-px bg-border" />
+              {todayRecords.map((r, i) => (
+                <div key={r.id} className={i < todayRecords.length - 1 ? "relative pb-4" : "relative"}>
+                  <span className={`absolute -left-4 top-1 w-2 h-2 rounded-full ${EVENT_DOT[r.type] ?? "bg-gray-400"}`} />
+                  <p className="text-sm font-medium text-foreground">{EVENT_LABEL[r.type] ?? r.type}</p>
+                  <p className="text-xs text-muted">{formatTime(r.occurredAt)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white border border-border rounded-2xl p-5 sm:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-foreground">Past History</h2>
+            {pastDays.length > 3 && (
+              <button onClick={() => setShowAllHistory((v) => !v)} className="text-xs font-semibold text-primary hover:underline">
+                {showAllHistory ? "Show less" : "View Full History →"}
               </button>
-            ))}
+            )}
           </div>
-
-          <div className="bg-white border border-border rounded-2xl p-4 mb-4 space-y-4 max-h-96 overflow-y-auto">
-            {activityLoading && <p className="text-muted text-sm">Loading activity...</p>}
-            {!activityLoading && activity.length === 0 && <p className="text-muted text-sm">No activity posted yet.</p>}
-            {activity.map((entry) => (
-              <div key={entry.id} className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-accent-soft text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                  {entry.author.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-sm font-medium text-foreground">{entry.author.name}</span>
-                    <span className="text-[11px] text-muted">{entry.author.role.toLowerCase()}</span>
-                    <span className="text-[11px] text-muted ml-auto shrink-0">
-                      {new Date(entry.createdAt).toLocaleString()}
+          {pastDays.length === 0 ? (
+            <p className="text-sm text-muted">No earlier records yet.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {visiblePastDays.map(([key, records]) => {
+                const checkIn = records.find((r) => r.type === "CHECK_IN");
+                const checkOut = [...records].reverse().find((r) => r.type === "CHECK_OUT");
+                return (
+                  <div key={key} className="flex items-center justify-between py-2.5 text-sm">
+                    <span className="font-medium text-foreground">
+                      {new Date(key).toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" })}
                     </span>
+                    <span className="text-muted">{checkIn ? formatTime(checkIn.occurredAt) : "—"} – {checkOut ? formatTime(checkOut.occurredAt) : "—"}</span>
                   </div>
-                  <div className="bg-accent-soft/60 rounded-lg rounded-tl-none px-3 py-2">
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{entry.content}</p>
-                    {entry.links.length > 0 && (
-                      <ul className="mt-1 space-y-0.5">
-                        {entry.links.map((link) => (
-                          <li key={link}>
-                            <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">
-                              {link}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-2 items-end">
-            <textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              rows={1}
-              placeholder="Ask a question or post an update..."
-              className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-            />
-            <button
-              onClick={handlePost}
-              disabled={posting || !newMessage.trim()}
-              className="bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-primary-hover disabled:opacity-50 shrink-0"
-            >
-              {posting ? "..." : "Post"}
-            </button>
-          </div>
-        </>
-      )}
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

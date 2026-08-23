@@ -175,6 +175,20 @@ export function deleteTask(taskId: string) {
 }
 
 
+export type TaskAssignmentRow = {
+  assignmentId: string;
+  membershipId: string;
+  status: AssignmentStatus;
+  intern: { id: string; name: string; email: string };
+  submittedAt: string | null;
+};
+
+export function getTaskAssignments(taskId: string) {
+  return request<TaskAssignmentRow[]>(`/tasks/${taskId}/assignments`);
+}
+
+
+
 // ---- Assignment endpoints ----
 export type AssignmentStatus =
   | "NOT_STARTED"
@@ -315,6 +329,43 @@ export function getCohortProgress(cohortId: string) {
   return request<MemberProgress[]>(`/cohorts/${cohortId}/progress`);
 }
 
+
+// ---- Dashboard endpoints ----
+export type DashboardCohortProgress = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  internsCount: number;
+  taskCompletionPercent: number;
+  linkedInCompletionPercent: number;
+  status: "Active" | "Archived";
+};
+
+export type DashboardSummary = {
+  activeInterns: number;
+  tasksPublishedThisWeek: number;
+  avgRating: number | null;
+  linkedInPostsThisWeek: number;
+  cohorts: DashboardCohortProgress[];
+};
+
+export function getDashboardSummary() {
+  return request<DashboardSummary>("/dashboard/summary");
+}
+
+export type PendingReview = {
+  assignmentId: string;
+  submittedAt: string;
+  task: { id: string; title: string };
+  cohort: { id: string; name: string };
+  membershipId: string;
+  intern: { id: string; name: string };
+};
+
+export function getDashboardPendingReviews() {
+  return request<{ count: number; items: PendingReview[] }>("/dashboard/pending-reviews");
+}
 // ---- LinkedIn post endpoints ----
 export type LinkedInPost = {
   id: string;

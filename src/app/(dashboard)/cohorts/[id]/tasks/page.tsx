@@ -3,9 +3,10 @@
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { getCohorts, getTasks, type Cohort, type Task } from "@/lib/api";
+import { markdownPreview } from "@/components/MarkdownText";
 
 import { CreateTaskForm } from "./CreateTaskForm";
-import { TaskList } from "./TaskList";
+
 export default function CohortTasksPage({
   params,
 }: {
@@ -17,7 +18,6 @@ export default function CohortTasksPage({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showForm, setShowForm] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -37,36 +37,57 @@ export default function CohortTasksPage({
     load();
   }, [id]);
 
-  if (loading) return <p className="p-6 text-muted">Loading tasks…</p>;
-  if (error) return <p className="p-6 text-red-600">{error}</p>;
+  if (loading) return <p className="text-sm text-muted">Loading tasks…</p>;
+  if (error) return <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>;
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <Link href={`/cohorts/${id}`} className="text-sm text-accent hover:underline">
-        ← Back to {cohort?.name ?? "cohort"}
-      </Link>
-
-      <div className="flex items-center justify-between mt-4 mb-6">
-        <h1 className="text-2xl font-semibold text-foreground">Tasks</h1>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
-        >
-          {showForm ? "Cancel" : "+ New Task"}
-        </button>
+    <div>
+      <div className="flex items-center gap-1.5 text-sm text-muted mb-2">
+        <Link href="/cohorts" className="hover:text-primary">Cohorts</Link>
+        <span>›</span>
+        <Link href={`/cohorts/${id}`} className="hover:text-primary">{cohort?.name ?? "Cohort"}</Link>
+        <span>›</span>
+        <span className="text-foreground font-medium">Tasks</span>
       </div>
 
-      {showForm && (
-        <CreateTaskForm
-          cohortId={id}
-          onCreated={() => {
-            setShowForm(false);
-            load();
-          }}
-        />
-      )}
+      <h1 className="text-2xl font-bold text-foreground mb-6">New Task Creator</h1>
 
-      <TaskList tasks={tasks} onChange={load} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2">
+          <CreateTaskForm cohortId={id} onCreated={load} />
+        </div>
+
+        <div className="bg-white border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border">
+            <h2 className="font-semibold text-foreground">Recent Tasks</h2>
+          </div>
+          {tasks.length === 0 ? (
+            <p className="text-sm text-muted px-5 py-6">No tasks yet for this cohort.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {tasks.map((task) => (
+                <Link
+                  key={task.id}
+                  href={`/cohorts/${id}/tasks/${task.id}`}
+                  className="block px-5 py-4 hover:bg-accent-soft/40 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-sm font-semibold text-foreground">{task.title}</p>
+                    <span
+                      className={`text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${
+                        task.state === "PUBLISHED" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {task.state === "PUBLISHED" ? "Published" : "Draft"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted line-clamp-1">{markdownPreview(task.description)}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

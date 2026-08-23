@@ -19,6 +19,8 @@ export function RatingTrendChart({ data }: { data: RatingPoint[] }) {
   const y = (rating: number) => padTop + ((5 - rating) / 4) * plotH;
 
   const linePath = data.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(d.rating)}`).join(" ");
+  const baseline = padTop + plotH;
+  const areaPath = `${linePath} L ${x(data.length - 1)} ${baseline} L ${x(0)} ${baseline} Z`;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-40" role="img" aria-label="Rating trend by week">
@@ -31,6 +33,7 @@ export function RatingTrendChart({ data }: { data: RatingPoint[] }) {
         </g>
       ))}
 
+      <path d={areaPath} className="fill-accent-soft" />
       <path d={linePath} fill="none" className="stroke-primary" strokeWidth={2} />
 
       {data.map((d, i) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WorkHoursChart } from "@/components/WorkHoursChart";
 import {
   getMyMemberships,
   getAttendance,
@@ -217,6 +218,10 @@ export default function AttendancePage() {
             {error}
           </p>
         )}
+      </div>
+
+      <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+        <WorkHoursChart attendance={records} />
       </div>
 
       <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
