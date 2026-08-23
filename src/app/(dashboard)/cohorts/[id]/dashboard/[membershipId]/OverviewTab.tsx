@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Assignment, LinkedInPost } from "@/lib/api";
 import { RatingTrendChart } from "./RatingTrendCharter";
 
@@ -29,10 +30,12 @@ function StarRow({ rating, size = "w-5 h-5" }: { rating: number; size?: string }
 }
 
 export function OverviewTab({
+  cohortId,
   assignments,
   ratingHistory,
   linkedInPosts,
 }: {
+  cohortId: string;
   assignments: Assignment[];
   ratingHistory: { weekNumber: number; rating: number }[];
   linkedInPosts: LinkedInPost[];
@@ -83,12 +86,16 @@ export function OverviewTab({
       ) : (
         <div className="bg-white border border-border rounded-2xl divide-y divide-border overflow-hidden mb-8">
           {assignments.map((a) => (
-            <div key={a.id} className="flex items-center justify-between px-4 py-3">
+            <Link
+              key={a.id}
+              href={`/cohorts/${cohortId}/tasks/${a.taskId}?assignment=${a.id}`}
+              className="flex items-center justify-between px-4 py-3 hover:bg-accent-soft/40 transition-colors"
+            >
               <p className="text-sm text-foreground">{a.task.title}</p>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-500"}`}>
                 {STATUS_LABELS[a.status] ?? a.status}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       )}

@@ -1,14 +1,16 @@
 "use client";
 
-import { Navbar } from "@/components/Navbar";
+import { Sidebar } from "@/components/Sidebar";
 import { RouteGuard } from "@/components/RouteGuard";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <RouteGuard allowedRoles={["MENTOR"]}>
-      <div className="min-h-screen flex flex-col bg-background">
-        <Navbar />
-        <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8">{children}</main>
+      <div className="min-h-screen flex bg-background">
+        <Sidebar />
+        <main className="flex-1 min-w-0 px-8 py-8">
+          <div className="max-w-7xl">{children}</div>
+        </main>
       </div>
     </RouteGuard>
   );

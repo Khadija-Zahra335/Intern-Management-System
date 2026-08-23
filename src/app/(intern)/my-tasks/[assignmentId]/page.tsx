@@ -4,18 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MarkdownText } from "@/components/MarkdownText";
+import { ActivityThread } from "@/components/ActivityThread";
 import { uploadAttachment } from "@/lib/api";
 import {
   Assignment,
   Submission,
-  Activity,
   getMyMemberships,
   getAssignments,
   getSubmissions,
   createSubmission,
   updateAssignmentStatus,
-  getActivity,
-  postActivity,
 } from "@/lib/api";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -48,7 +46,6 @@ export default function TaskDetailPage() {
 
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [activity, setActivity] = useState<Activity[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -57,9 +54,8 @@ export default function TaskDetailPage() {
   const [content, setContent] = useState("");
   const [linksText, setLinksText] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
-  const [posting, setPosting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+
   async function loadAll() {
     setLoading(true);
     setError("");
@@ -72,15 +68,13 @@ export default function TaskDetailPage() {
         return;
       }
 
-      const [assignments, subs, activityEntries] = await Promise.all([
+      const [assignments, subs] = await Promise.all([
         getAssignments(active.id),
         getSubmissions(assignmentId),
-        getActivity(assignmentId),
       ]);
 
       setAssignment(assignments.find((a) => a.id === assignmentId) ?? null);
       setSubmissions(subs);
-      setActivity(activityEntries);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load task");
     } finally {
@@ -141,21 +135,6 @@ export default function TaskDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to submit");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handlePostActivity() {
-    if (!newMessage.trim()) return;
-    setPosting(true);
-    setError("");
-    try {
-      await postActivity(assignmentId, { content: newMessage.trim() });
-      setNewMessage("");
-      setActivity(await getActivity(assignmentId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to post");
-    } finally {
-      setPosting(false);
     }
   }
 
@@ -274,7 +253,6 @@ export default function TaskDetailPage() {
             <p className="text-xs text-muted mt-1">PDF, images, ZIP, Word docs, or plain text — up to 4MB each.</p>
           </div>
 
-          
           <button
             type="submit"
             disabled={submitting}
@@ -329,43 +307,8 @@ export default function TaskDetailPage() {
         </div>
       )}
 
-      <h2 className="font-medium text-foreground mb-3">Activity</h2>
-      <div className="border border-border rounded-2xl bg-white p-4 mb-4 space-y-4 max-h-96 overflow-y-auto">
-        {activity.length === 0 && <p className="text-muted text-sm">No activity yet.</p>}
-        {activity.map((entry) => (
-          <div key={entry.id} className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-accent-soft text-primary flex items-center justify-center text-xs font-bold shrink-0">
-              {entry.author.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-sm font-medium text-foreground">{entry.author.name}</span>
-                <span className="text-[11px] text-muted">{entry.author.role.toLowerCase()}</span>
-                <span className="text-[11px] text-muted ml-auto shrink-0">{new Date(entry.createdAt).toLocaleString()}</span>
-              </div>
-              <div className="bg-accent-soft/60 rounded-lg rounded-tl-none px-3 py-2">
-                <p className="text-sm text-foreground whitespace-pre-wrap">{entry.content}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex gap-2 items-end">
-        <textarea
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          rows={1}
-          placeholder="Ask a question or post an update..."
-          className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-        />
-        <button
-          onClick={handlePostActivity}
-          disabled={posting || !newMessage.trim()}
-          className="bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-primary-hover disabled:opacity-50 shrink-0"
-        >
-          {posting ? "..." : "Post"}
-        </button>
+      <div style={{ height: "420px" }}>
+        <ActivityThread assignmentId={assignmentId} mineRole="INTERN" headerTitle="Activity" />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createTask, generateTaskDraft } from "@/lib/api";
+import { createTask, publishTask, generateTaskDraft } from "@/lib/api";
 import { MarkdownText } from "@/components/MarkdownText";
 
 export function CreateTaskForm({
@@ -16,7 +16,8 @@ export function CreateTaskForm({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const [topic, setTopic] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -44,30 +45,52 @@ export function CreateTaskForm({
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function resetForm() {
+    setTitle("");
+    setDescription("");
+    setStartDate("");
+    setEndDate("");
+    setTopic("");
+    setIsAiDraft(false);
+    setShowPreview(false);
+  }
+
+  async function handleSaveAsDraft(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setSubmitting(true);
+    setSavingDraft(true);
     try {
       await createTask({ cohortId, title, description, startDate, endDate });
-      setTitle("");
-      setDescription("");
-      setStartDate("");
-      setEndDate("");
-      setTopic("");
-      setIsAiDraft(false);
-      setShowPreview(false);
+      resetForm();
       onCreated();
     } catch (err: any) {
       setError(err.message ?? "Failed to create task");
     } finally {
-      setSubmitting(false);
+      setSavingDraft(false);
     }
   }
 
+  async function handleCreateAndPublish(e: React.MouseEvent) {
+    e.preventDefault();
+    setError("");
+    setPublishing(true);
+    try {
+      const task = await createTask({ cohortId, title, description, startDate, endDate });
+      await publishTask(task.id);
+      resetForm();
+      onCreated();
+    } catch (err: any) {
+      setError(err.message ?? "Task was saved as a draft, but publishing failed — you can publish it from the task list.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  const busy = savingDraft || publishing;
+
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-white p-5 space-y-4 mb-6">
-      <div className="rounded-lg border border-dashed border-accent bg-accent-soft/40 p-4 space-y-2">
+    <form onSubmit={handleSaveAsDraft} className="rounded-2xl border border-border bg-white p-5 space-y-4">
+      <div className="rounded-xl border border-dashed border-accent bg-accent-soft/40 p-4 space-y-2">
         <label className="block text-sm font-medium text-foreground">Draft with AI (optional)</label>
         <p className="text-xs text-muted">
           Describe the topic in plain language and get a structured draft — Overview, Hands-on, Deliverable —
@@ -98,7 +121,7 @@ export function CreateTaskForm({
       )}
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Title</label>
+        <label className="block text-sm font-medium text-foreground mb-1">Task title</label>
         <input
           value={title}
           onChange={(e) => {
@@ -109,6 +132,29 @@ export function CreateTaskForm({
           className="w-full rounded-lg border border-border px-3 py-2 text-sm"
         />
       </div>
+
+      {/* <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Start date</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">End date</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            required
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+          />
+        </div>
+      </div> */}
 
       <div>
         <div className="flex items-center justify-between mb-1">
@@ -144,6 +190,10 @@ export function CreateTaskForm({
         </p>
       </div>
 
+
+      
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Start date</label>
@@ -167,15 +217,23 @@ export function CreateTaskForm({
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-      >
-        {submitting ? "Creating…" : "Create task (draft)"}
-      </button>
+      <div className="flex items-center gap-3 pt-1">
+        <button
+          type="submit"
+          disabled={busy}
+          className="rounded-lg border border-border text-foreground text-sm font-semibold px-4 py-2.5 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+        >
+          {savingDraft ? "Saving…" : "Save as Draft"}
+        </button>
+        <button
+          type="button"
+          onClick={handleCreateAndPublish}
+          disabled={busy}
+          className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2.5 disabled:opacity-50"
+        >
+          {publishing ? "Publishing…" : "Create & Publish"}
+        </button>
+      </div>
     </form>
   );
 }
