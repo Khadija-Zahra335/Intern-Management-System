@@ -22,7 +22,7 @@ export default function LoginPage() {
       const data = await login(email, password);
       saveToken(data.token);
       await refreshUser();
-      router.push(data.user.role === "MENTOR" ? "/cohorts" : "/my-tasks");
+      router.push(data.user.role === "MENTOR" ? "/dashboard" : "/my-tasks");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

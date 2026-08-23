@@ -24,9 +24,11 @@ import { OverviewTab } from "./OverviewTab";
 import { SubmissionsTab } from "./SubmissionTab";
 import { FeedbackTab } from "./FeedbackTab";
 import { CheckinsTab } from "./CheckinsTab";
+import { TaskActivityTab } from "./TaskActivityTab";
 
 const TABS = [
   { key: "overview", label: "Overview" },
+  { key: "activity", label: "Task Activity" },
   { key: "submissions", label: "Submissions" },
   { key: "feedback", label: "Feedback" },
   { key: "checkins", label: "Attendance" },
@@ -52,6 +54,7 @@ function avatarPalette(seed: string) {
 export default function InternProgressPage() {
   const { id, membershipId } = useParams<{ id: string; membershipId: string }>();
   const [tab, setTab] = useState<TabKey>("overview");
+  const [activeAssignmentId, setActiveAssignmentId] = useState<string | null>(null);
 
   const [cohort, setCohort] = useState<Cohort | null>(null);
   const [member, setMember] = useState<Membership | null>(null);
@@ -197,9 +200,31 @@ export default function InternProgressPage() {
       </div>
 
       {tab === "overview" && (
-        <OverviewTab cohortId={id} assignments={assignments} ratingHistory={ratingHistory} linkedInPosts={linkedInPosts} />
+        <OverviewTab
+          assignments={assignments}
+          ratingHistory={ratingHistory}
+          linkedInPosts={linkedInPosts}
+          onSelectTask={(assignmentId) => {
+            setActiveAssignmentId(assignmentId);
+            setTab("activity");
+          }}
+        />
       )}
-      {tab === "submissions" && <SubmissionsTab history={submissionHistory} onReviewed={loadAll} />}
+      {tab === "activity" && (
+        <TaskActivityTab
+          assignments={assignments}
+          selectedAssignmentId={activeAssignmentId}
+          onSelect={setActiveAssignmentId}
+        />
+      )}
+      {tab === "submissions" && (
+        <SubmissionsTab
+          history={submissionHistory}
+          onReviewed={loadAll}
+          internName={member?.user.name ?? "Intern"}
+          internEmail={member?.user.email ?? ""}
+        />
+      )}
       {tab === "feedback" && (
         <FeedbackTab membershipId={membershipId} feedback={feedback} assignments={assignments} onSaved={loadAll} />
       )}

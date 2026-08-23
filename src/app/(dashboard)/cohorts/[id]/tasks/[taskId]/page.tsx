@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   getCohorts,
   getTasks,
@@ -47,6 +48,8 @@ function avatarPalette(seed: string) {
 
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string; taskId: string }> }) {
   const { id, taskId } = use(params);
+  const searchParams = useSearchParams();
+  const assignmentParam = searchParams.get("assignment");
 
   const [cohort, setCohort] = useState<Cohort | null>(null);
   const [task, setTask] = useState<Task | null>(null);
@@ -78,6 +81,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     load();
   }, [id, taskId]);
+
+  // Deep-link support: if we arrived via ?assignment=<id> (e.g. from the
+  // Overview tab's task row), pre-select that intern's thread once their
+  // assignment shows up in the list.
+  useEffect(() => {
+    if (assignmentParam && assignments.some((a) => a.assignmentId === assignmentParam)) {
+      setSelectedAssignmentId(assignmentParam);
+    }
+  }, [assignmentParam, assignments]);
 
   async function handlePublish() {
     setBusy(true);

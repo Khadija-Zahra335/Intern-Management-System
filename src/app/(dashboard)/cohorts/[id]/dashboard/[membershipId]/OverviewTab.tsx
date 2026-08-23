@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Assignment, LinkedInPost } from "@/lib/api";
 import { RatingTrendChart } from "./RatingTrendCharter";
 
@@ -30,15 +29,15 @@ function StarRow({ rating, size = "w-5 h-5" }: { rating: number; size?: string }
 }
 
 export function OverviewTab({
-  cohortId,
   assignments,
   ratingHistory,
   linkedInPosts,
+  onSelectTask,
 }: {
-  cohortId: string;
   assignments: Assignment[];
   ratingHistory: { weekNumber: number; rating: number }[];
   linkedInPosts: LinkedInPost[];
+  onSelectTask: (assignmentId: string) => void;
 }) {
   const completed = assignments.filter((a) => a.status === "COMPLETED").length;
   const percent = assignments.length > 0 ? Math.round((completed / assignments.length) * 100) : 0;
@@ -86,16 +85,16 @@ export function OverviewTab({
       ) : (
         <div className="bg-white border border-border rounded-2xl divide-y divide-border overflow-hidden mb-8">
           {assignments.map((a) => (
-            <Link
+            <button
               key={a.id}
-              href={`/cohorts/${cohortId}/tasks/${a.taskId}?assignment=${a.id}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-accent-soft/40 transition-colors"
+              onClick={() => onSelectTask(a.id)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent-soft/40 transition-colors text-left"
             >
               <p className="text-sm text-foreground">{a.task.title}</p>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-500"}`}>
                 {STATUS_LABELS[a.status] ?? a.status}
               </span>
-            </Link>
+            </button>
           ))}
         </div>
       )}
