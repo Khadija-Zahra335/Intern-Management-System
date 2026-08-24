@@ -33,6 +33,30 @@ model User {
   createdTasks  Task[]         @relation("TaskAuthor")
   givenFeedback Feedback[]     @relation("FeedbackAuthor")
   activities    TaskActivity[] @relation("ActivityAuthor")
+  authTokens    AuthToken[]
+}
+
+// Single-use, time-limited tokens emailed to a user — either to let them
+// reset a forgotten password, or to sign in without a password at all
+// ("magic link"). Only a sha256 hash of the token is ever stored; the raw
+// token exists only in the emailed link, never in the database.
+enum AuthTokenPurpose {
+  PASSWORD_RESET
+  MAGIC_LOGIN
+}
+
+model AuthToken {
+  id        String           @id @default(uuid())
+  userId    String
+  tokenHash String           @unique
+  purpose   AuthTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
 }
 
 model Cohort {
