@@ -157,9 +157,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           <div>
             <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">Status</p>
             <span
-              className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${
-                task.state === "PUBLISHED" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
-              }`}
+              className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${task.state === "PUBLISHED" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                }`}
             >
               {task.state === "PUBLISHED" ? "Published" : "Draft"}
             </span>
@@ -177,17 +176,23 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
           {task.state === "DRAFT" && (
             <div className="flex items-center gap-3 pt-2 border-t border-border">
-              <button
-                onClick={handlePublish}
-                disabled={busy}
-                className="rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-2 disabled:opacity-50"
-              >
-                Publish
-              </button>
+              {cohort?.isActive ? (
+                <button
+                  onClick={handlePublish}
+                  disabled={busy}
+                  className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2.5 disabled:opacity-50"
+                >
+                  Publish
+                </button>
+              ) : (
+                <span className="text-xs font-medium text-muted bg-gray-100 rounded-lg px-4 py-2.5">
+                  Archived — can&apos;t publish
+                </span>
+              )}
               <button
                 onClick={handleDelete}
                 disabled={busy}
-                className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
+                className="rounded-lg border border-red-200 text-red-600 text-sm font-semibold px-4 py-2.5 hover:bg-red-50 disabled:opacity-50"
               >
                 Delete
               </button>
@@ -223,9 +228,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                   <button
                     key={a.assignmentId}
                     onClick={() => setSelectedAssignmentId(a.assignmentId)}
-                    className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-lg transition-colors border ${
-                      selectedAssignmentId === a.assignmentId ? "bg-accent-soft border-accent" : "border-transparent hover:bg-accent-soft/50"
-                    }`}
+                    className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-lg transition-colors border ${selectedAssignmentId === a.assignmentId ? "bg-accent-soft border-accent" : "border-transparent hover:bg-accent-soft/50"
+                      }`}
                   >
                     <div className={`w-8 h-8 rounded-full ${palette.bg} ${palette.text} flex items-center justify-center text-xs font-bold shrink-0`}>
                       {a.intern.name.charAt(0).toUpperCase()}

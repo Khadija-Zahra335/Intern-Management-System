@@ -26,5 +26,9 @@ export const createTaskSchema = z
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
 export const draftTaskSchema = z.object({
-  topic: z.string().trim().min(3, "Describe the topic in a bit more detail so the AI has something to work with"),
+  topic: z
+    .string()
+    .trim()
+    .min(3, "Describe the topic in a bit more detail so the AI has something to work with")
+    .max(300, "Keep the topic under 300 characters — a short phrase or sentence is enough"),
 });

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Cohort,
   Membership,
@@ -51,9 +51,13 @@ function avatarPalette(seed: string) {
   return AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
 }
 
-export default function InternProgressPage() {
+  export default function InternProgressPage() {
   const { id, membershipId } = useParams<{ id: string; membershipId: string }>();
-  const [tab, setTab] = useState<TabKey>("overview");
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<TabKey>(() => {
+    const requested = searchParams.get("tab");
+    return TABS.some((t) => t.key === requested) ? (requested as TabKey) : "overview";
+  });
   const [activeAssignmentId, setActiveAssignmentId] = useState<string | null>(null);
 
   const [cohort, setCohort] = useState<Cohort | null>(null);
@@ -228,7 +232,9 @@ export default function InternProgressPage() {
       {tab === "feedback" && (
         <FeedbackTab membershipId={membershipId} feedback={feedback} assignments={assignments} onSaved={loadAll} />
       )}
-      {tab === "checkins" && <CheckinsTab attendance={attendance} />}
+     {tab === "checkins" && (
+  <CheckinsTab membershipId={membershipId} attendance={attendance} onChanged={loadAll} />
+)}
     </div>
   );
 }
