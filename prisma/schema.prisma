@@ -2,6 +2,17 @@
 // Revised after mentor feedback: Week and CheckIn removed,
 // Attendance and TaskActivity added.
 
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+  
+datasource db {
+  provider = "postgresql"
+}
+
+
 enum Role {
   MENTOR
   INTERN
