@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { RoleTogglePreview } from "./RoleTogglePreview";
 
-export function HomePage() {
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <nav className="border-b border-border bg-white">
