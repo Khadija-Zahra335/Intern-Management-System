@@ -1,5 +1,5 @@
 import { Assignment, LinkedInPost } from "@/lib/api";
-import { RatingTrendChart } from "./RatingTrendCharter";
+import { RatingTrendChart } from "@/components/RatingTrendChart";
 
 const STATUS_STYLES: Record<string, string> = {
   NOT_STARTED: "bg-gray-100 text-gray-500",

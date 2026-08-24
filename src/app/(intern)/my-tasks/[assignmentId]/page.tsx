@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MarkdownText } from "@/components/MarkdownText";
 import { ActivityThread } from "@/components/ActivityThread";
+import { formatDate } from "@/lib/format";
 import { uploadAttachment } from "@/lib/api";
 import {
   Assignment,
@@ -35,8 +36,25 @@ const SETTABLE_STATUSES = ["NOT_STARTED", "IN_PROGRESS", "BLOCKED"] as const;
 
 function PaperclipIcon() {
   return (
-    <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-none stroke-primary inline shrink-0" strokeWidth={1.5}>
+    <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-none stroke-current inline shrink-0" strokeWidth={1.5}>
       <path d="M8 12.5l4-4a2 2 0 10-2.8-2.8l-5 5a3.5 3.5 0 004.9 4.9l4.4-4.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className}>
+      <rect x="3" y="4" width="14" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 8h14M7 2.5V5M13 2.5V5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SendIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className}>
+      <path d="M17 3L3 9.5l5.5 2 2 5.5L17 3z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }
@@ -151,164 +169,202 @@ export default function TaskDetailPage() {
 
   const canAct = assignment.status === "NOT_STARTED" || assignment.status === "IN_PROGRESS" || assignment.status === "BLOCKED";
 
+  const sortedSubmissions = [...submissions].sort(
+    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+  );
+  const latestSubmission = sortedSubmissions[0] ?? null;
+
+  let statusBadge: { label: string; className: string } | null = null;
+  if (assignment.status === "SUBMITTED") {
+    statusBadge = { label: "Pending", className: "bg-amber-50 text-amber-700" };
+  } else if (assignment.status === "COMPLETED") {
+    statusBadge = { label: "Approved", className: "bg-green-50 text-green-700" };
+  } else if (latestSubmission && latestSubmission.reviewedAt !== null) {
+    statusBadge = { label: "Changes requested", className: "bg-red-50 text-red-600" };
+  }
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <Link href="/my-tasks" className="text-sm text-primary hover:underline mb-4 inline-block">
-        ← Back to my tasks
-      </Link>
+    <div>
+      <div className="flex items-center gap-1.5 text-sm mb-6">
+        <Link href="/my-tasks" className="text-muted hover:text-primary">My Tasks</Link>
+        <span className="text-muted">›</span>
+        <span className="text-foreground font-semibold">{assignment.task.title}</span>
+      </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{error}</p>}
 
-      <div className="flex items-start justify-between mb-2">
-        <h1 className="text-xl font-semibold text-foreground">{assignment.task.title}</h1>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ml-3 ${STATUS_STYLES[assignment.status] ?? "bg-gray-100 text-gray-500"}`}>
-          {STATUS_LABELS[assignment.status] ?? assignment.status}
-        </span>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+        <div className="space-y-4">
+          <div className="bg-white border border-border rounded-2xl p-5">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              {(assignment.task.startDate || assignment.task.endDate) ? (
+                <div className="flex items-center gap-1.5 text-xs text-muted">
+                  <CalendarIcon className="w-3.5 h-3.5" />
+                  {assignment.task.startDate ? formatDate(assignment.task.startDate) : "—"} –{" "}
+                  {assignment.task.endDate ? formatDate(assignment.task.endDate) : "—"}
+                </div>
+              ) : <span />}
 
-      <div className="border border-border rounded-2xl p-5 bg-white mb-6">
-        <MarkdownText content={assignment.task.description} />
-      </div>
-
-      {(assignment.task.startDate || assignment.task.endDate) && (
-        <p className="text-xs text-muted mb-6">
-          {assignment.task.startDate ? new Date(assignment.task.startDate).toLocaleDateString() : "—"} –{" "}
-          {assignment.task.endDate ? new Date(assignment.task.endDate).toLocaleDateString() : "—"}
-        </p>
-      )}
-
-      {canAct && (
-        <div className="mb-8">
-          <p className="text-sm font-medium text-foreground mb-2">Update your status</p>
-          <div className="flex gap-2">
-            {SETTABLE_STATUSES.map((s) => (
-              <button
-                key={s}
-                onClick={() => handleStatusChange(s)}
-                disabled={statusBusy || assignment.status === s}
-                className={
-                  assignment.status === s
-                    ? "bg-primary text-white px-4 py-1.5 rounded-md text-sm font-medium"
-                    : "border border-primary text-primary px-4 py-1.5 rounded-md text-sm font-medium hover:bg-primary hover:text-white disabled:opacity-50"
-                }
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {assignment.status === "SUBMITTED" && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 mb-8">
-          Submitted — waiting for your mentor to review it.
-        </div>
-      )}
-
-      {assignment.status === "COMPLETED" && (
-        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-800 mb-8">
-          Approved and marked complete.
-        </div>
-      )}
-
-      {canAct && (
-        <form onSubmit={handleSubmitWork} className="border border-border rounded-2xl p-5 bg-white mb-8 space-y-4">
-          <h2 className="font-medium text-foreground">Submit your work</h2>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">What did you do?</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={3}
-              placeholder="Briefly describe what you're submitting..."
-              className="border border-border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Links (one per line)</label>
-            <textarea
-              value={linksText}
-              onChange={(e) => setLinksText(e.target.value)}
-              rows={3}
-              placeholder={"https://github.com/you/repo\nhttps://your-demo-link.com"}
-              className="border border-border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-            />
-          </div>
-
-           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Attach files (optional)</label>
-            <input
-              type="file"
-              multiple
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-              className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary hover:file:bg-accent-soft/80"
-            />
-            {files.length > 0 && (
-              <ul className="mt-2 text-xs text-muted space-y-0.5">
-                {files.map((f, i) => (
-                  <li key={i}>{f.name} ({(f.size / 1024).toFixed(0)} KB)</li>
-                ))}
-              </ul>
-            )}
-            <p className="text-xs text-muted mt-1">PDF, images, ZIP, Word docs, or plain text — up to 4MB each.</p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
-          >
-            {submitting ? "Submitting..." : "Mark ready for review"}
-          </button>
-        </form>
-      )}
-
-      {submissions.length > 0 && (
-        <div className="mb-8">
-          <h2 className="font-medium text-foreground mb-3">Submission history</h2>
-          <div className="space-y-3">
-            {submissions.map((s) => (
-              <div key={s.id} className="border border-border rounded-lg p-4 bg-white">
-                <p className="text-xs text-muted mb-2">Submitted {new Date(s.submittedAt).toLocaleString()}</p>
-                {s.content && <p className="text-sm text-foreground whitespace-pre-wrap mb-2">{s.content}</p>}
-                {s.links.length > 0 && (
-                  <ul className="text-sm space-y-1 mb-2">
-                    {s.links.map((link) => (
-                      <li key={link}>
-                        <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                          {link}
-                        </a>
-                      </li>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-medium text-muted">My status</span>
+                {canAct ? (
+                  <select
+                    value={assignment.status}
+                    onChange={(e) => handleStatusChange(e.target.value as (typeof SETTABLE_STATUSES)[number])}
+                    disabled={statusBusy}
+                    className="border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:opacity-50"
+                  >
+                    {SETTABLE_STATUSES.map((s) => (
+                      <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                     ))}
-                  </ul>
-                )}
-                {s.attachments && s.attachments.length > 0 && (
-                  <ul className="text-sm space-y-1 mb-2">
-                    {s.attachments.map((att) => (
-                      <li key={att.id} className="flex items-center gap-1.5">
-                        <PaperclipIcon />
-                        <a href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                          {att.fileName}
-                        </a>
-                        <span className="text-xs text-muted">({(att.fileSize / 1024).toFixed(0)} KB)</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {s.reviewNote && (
-                  <div className="bg-accent-soft/60 rounded-lg px-3 py-2 mt-2">
-                    <p className="text-xs font-medium text-foreground mb-0.5">Mentor note</p>
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{s.reviewNote}</p>
-                  </div>
+                  </select>
+                ) : (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[assignment.status] ?? "bg-gray-100 text-gray-500"}`}>
+                    {STATUS_LABELS[assignment.status] ?? assignment.status}
+                  </span>
                 )}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
 
-      <div style={{ height: "420px" }}>
-        <ActivityThread assignmentId={assignmentId} mineRole="INTERN" headerTitle="Activity" />
+            <div className="text-sm text-foreground">
+              <MarkdownText content={assignment.task.description} />
+            </div>
+          </div>
+
+          <div className="bg-white border border-border rounded-2xl p-5">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-foreground">Submit Work</h2>
+                {latestSubmission && (
+                  <p className="text-xs text-muted mt-0.5">Last submitted {formatDate(latestSubmission.submittedAt)}</p>
+                )}
+              </div>
+              {statusBadge && (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${statusBadge.className}`}>
+                  {statusBadge.label}
+                </span>
+              )}
+            </div>
+
+            {canAct ? (
+              <form onSubmit={handleSubmitWork} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">What did you build?</label>
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    rows={4}
+                    placeholder="Describe your implementation. What decisions did you make? What trade-offs?"
+                    className="border border-border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Links (GitHub PR, Figma, etc.)</label>
+                  <textarea
+                    value={linksText}
+                    onChange={(e) => setLinksText(e.target.value)}
+                    rows={2}
+                    placeholder="https://github.com/you/repo/pull/1"
+                    className="border border-border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                  />
+                  <p className="text-xs text-muted mt-1">One link per line if you have more than one.</p>
+                </div>
+
+                <div>
+                  <input
+                    type="file"
+                    multiple
+                    id="attach-file"
+                    onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                    className="hidden"
+                  />
+                  {files.length > 0 && (
+                    <ul className="text-xs text-muted space-y-0.5 mb-2">
+                      {files.map((f, i) => (
+                        <li key={i}>{f.name} ({(f.size / 1024).toFixed(0)} KB)</li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="attach-file"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border text-foreground text-sm font-medium px-3.5 py-2 cursor-pointer hover:border-primary hover:text-primary transition-colors"
+                    >
+                      <PaperclipIcon />
+                      Attach file
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+                    >
+                      <SendIcon className="w-3.5 h-3.5" />
+                      {submitting ? "Submitting..." : "Submit for Review"}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted mt-1.5">PDF, images, ZIP, Word docs, or plain text — up to 4MB each.</p>
+                </div>
+              </form>
+            ) : assignment.status === "SUBMITTED" ? (
+              <p className="text-sm text-muted">Waiting for your mentor to review this submission.</p>
+            ) : (
+              <p className="text-sm text-muted">This task has been approved and marked complete.</p>
+            )}
+          </div>
+
+          {sortedSubmissions.length > 0 && (
+            <div className="bg-white border border-border rounded-2xl p-5">
+              <h2 className="text-sm font-bold text-foreground mb-3">Submission history</h2>
+              <div className="space-y-3">
+                {sortedSubmissions.map((s) => (
+                  <div key={s.id} className="border border-border rounded-lg p-3">
+                    <p className="text-xs text-muted mb-1.5">Submitted {formatDate(s.submittedAt)}</p>
+                    {s.content && <p className="text-sm text-foreground whitespace-pre-wrap mb-2">{s.content}</p>}
+                    {s.links.length > 0 && (
+                      <ul className="text-xs space-y-1 mb-2">
+                        {s.links.map((link) => (
+                          <li key={link}>
+                            <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                              {link}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {s.attachments && s.attachments.length > 0 && (
+                      <ul className="text-xs space-y-1 mb-2">
+                        {s.attachments.map((att) => (
+                          <li key={att.id} className="flex items-center gap-1.5">
+                            <PaperclipIcon />
+                            <a href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                              {att.fileName}
+                            </a>
+                            <span className="text-muted">({(att.fileSize / 1024).toFixed(0)} KB)</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {s.reviewNote && (
+                      <div className="bg-accent-soft/60 rounded-lg px-3 py-2 mt-2">
+                        <p className="text-xs font-medium text-foreground mb-0.5">Mentor note</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{s.reviewNote}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ height: "600px" }}>
+          <ActivityThread
+            assignmentId={assignmentId}
+            mineRole="INTERN"
+            headerTitle="Activity"
+            headerSubtitle="Comments between you and your mentor"
+          />
+        </div>
       </div>
     </div>
   );
