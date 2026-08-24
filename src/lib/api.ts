@@ -85,6 +85,34 @@ export function getMe() {
   return request<{ user: User }>("/auth/me");
 }
 
+export function forgotPassword(email: string) {
+  return request<{ message: string }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPassword(token: string, password: string) {
+  return request<{ message: string }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  });
+}
+
+export function requestMagicLink(email: string) {
+  return request<{ message: string }>("/auth/magic-link/request", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function verifyMagicLink(token: string) {
+  return request<{ token: string; user: User }>("/auth/magic-link/verify", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
 // ---- Cohort endpoints ----
 export function getCohorts() {
   return request<Cohort[]>("/cohorts");

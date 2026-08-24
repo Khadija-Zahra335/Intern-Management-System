@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { register, login, saveToken } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import Image from "next/image";
+import { AuthCard } from "@/components/AuthCard";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,17 +34,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 relative shrink-0">
-          <Image src="/logo.png" alt="Musketeer Tech logo" fill className="object-contain" priority />
-        </div>
-        <span className="font-extrabold text-lg tracking-tight text-foreground">Musketeer Tech</span>
-      </div>
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-white border border-border rounded-2xl shadow-lg shadow-primary/5 p-8">
-        <h1 className="text-2xl font-bold text-foreground mb-1">Create your account</h1>
-        <p className="text-sm text-muted mb-7">Intern Management Platform</p>
-
+    <AuthCard title="Create your account" subtitle="Intern Management Platform">
+      <form onSubmit={handleSubmit}>
         {error && (
           <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
         )}
@@ -72,6 +63,6 @@ export default function RegisterPage() {
           <Link href="/login" className="text-primary font-medium hover:underline">Sign in</Link>
         </p>
       </form>
-    </div>
+    </AuthCard>
   );
 }
