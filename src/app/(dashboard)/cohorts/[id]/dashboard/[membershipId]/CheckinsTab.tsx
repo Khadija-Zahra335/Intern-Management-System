@@ -1,8 +1,9 @@
 "use client";
 
-import { Attendance } from "@/lib/api";
+import { Attendance, logAttendance } from "@/lib/api";
 import { WorkHoursChart } from "@/components/WorkHoursChart";
-import { deriveAttendanceState, groupAttendanceByDay, type SessionState } from "@/lib/attendanceHours";
+import { deriveAttendanceState, groupAttendanceByDay, formatEventTimestamp, type SessionState } from "@/lib/attendanceHours";
+import { pktDayKey } from "@/lib/timezone";
 import { useState } from "react";
 
 const STATE_META: Record<SessionState, { label: string; dot: string; bg: string; text: string }> = {
@@ -31,38 +32,80 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export function CheckinsTab({ attendance }: { attendance: Attendance[] }) {
+export function CheckinsTab({
+  membershipId,
+  attendance,
+  onChanged,
+}: {
+  membershipId: string;
+  attendance: Attendance[];
+  onChanged: () => void;
+}) {
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [forcingCheckout, setForcingCheckout] = useState(false);
+  const [forceError, setForceError] = useState("");
 
   const { state, lastEvent } = deriveAttendanceState(attendance);
   const stateMeta = STATE_META[state];
   const byDay = groupAttendanceByDay(attendance);
-  const todayKey = new Date().toLocaleDateString("en-CA");
+  const todayKey = pktDayKey(new Date());
   const todayRecords = byDay.get(todayKey) ?? [];
   const pastDays = Array.from(byDay.entries()).filter(([key]) => key !== todayKey).sort((a, b) => (a[0] < b[0] ? 1 : -1));
   const visiblePastDays = showAllHistory ? pastDays : pastDays.slice(0, 3);
 
+  async function handleForceCheckout() {
+    if (!confirm("Check this intern out now? Only use this if they forgot to check out themselves.")) return;
+    setForcingCheckout(true);
+    setForceError("");
+    try {
+      await logAttendance({
+        membershipId,
+        type: "CHECK_OUT",
+        note: "Checked out by mentor — session was left open too long.",
+      });
+      onChanged();
+    } catch (err: any) {
+      setForceError(err.message ?? "Failed to check out");
+    } finally {
+      setForcingCheckout(false);
+    }
+  }
+
   return (
     <div>
-      <div className="bg-white border border-border rounded-2xl p-5 mb-4 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">Current Activity</p>
-          <p className="text-sm text-muted">
-            {lastEvent ? `${EVENT_LABEL[lastEvent.type] ?? lastEvent.type} at ${formatTime(lastEvent.occurredAt)}` : "No activity logged yet"}
-          </p>
+      <div className="bg-white border border-border rounded-2xl p-5 mb-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">Current Activity</p>
+            <p className="text-sm text-muted">
+              {lastEvent ? `${EVENT_LABEL[lastEvent.type] ?? lastEvent.type} at ${formatEventTimestamp(lastEvent.occurredAt)}` : "No activity logged yet"}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full ${stateMeta.bg} ${stateMeta.text}`}>
+              <span className={`w-2 h-2 rounded-full ${stateMeta.dot}`} />
+              {stateMeta.label}
+            </span>
+            {state !== "OUT" && (
+              <button
+                onClick={handleForceCheckout}
+                disabled={forcingCheckout}
+                className="text-xs font-semibold text-red-600 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 disabled:opacity-50 transition-colors"
+              >
+                {forcingCheckout ? "Checking out…" : "Force Check-out"}
+              </button>
+            )}
+          </div>
         </div>
-        <span className={`inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full ${stateMeta.bg} ${stateMeta.text}`}>
-          <span className={`w-2 h-2 rounded-full ${stateMeta.dot}`} />
-          {stateMeta.label}
-        </span>
+        {forceError && <p className="text-xs text-red-600 mt-2">{forceError}</p>}
       </div>
 
-      <div className="mb-4">
-        <WorkHoursChart attendance={attendance} />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <div className="lg:col-span-2">
+          <WorkHoursChart attendance={attendance} />
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-border rounded-2xl p-5 sm:col-span-1">
+        <div className="bg-white border border-border rounded-2xl p-5">
           <h2 className="text-sm font-bold text-foreground mb-4">Today's Log</h2>
           {todayRecords.length === 0 ? (
             <p className="text-sm text-muted">No activity logged today yet.</p>
@@ -79,35 +122,35 @@ export function CheckinsTab({ attendance }: { attendance: Attendance[] }) {
             </div>
           )}
         </div>
+      </div>
 
-        <div className="bg-white border border-border rounded-2xl p-5 sm:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-foreground">Past History</h2>
-            {pastDays.length > 3 && (
-              <button onClick={() => setShowAllHistory((v) => !v)} className="text-xs font-semibold text-primary hover:underline">
-                {showAllHistory ? "Show less" : "View Full History →"}
-              </button>
-            )}
-          </div>
-          {pastDays.length === 0 ? (
-            <p className="text-sm text-muted">No earlier records yet.</p>
-          ) : (
-            <div className="divide-y divide-border">
-              {visiblePastDays.map(([key, records]) => {
-                const checkIn = records.find((r) => r.type === "CHECK_IN");
-                const checkOut = [...records].reverse().find((r) => r.type === "CHECK_OUT");
-                return (
-                  <div key={key} className="flex items-center justify-between py-2.5 text-sm">
-                    <span className="font-medium text-foreground">
-                      {new Date(key).toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" })}
-                    </span>
-                    <span className="text-muted">{checkIn ? formatTime(checkIn.occurredAt) : "—"} – {checkOut ? formatTime(checkOut.occurredAt) : "—"}</span>
-                  </div>
-                );
-              })}
-            </div>
+      <div className="bg-white border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-foreground">Past History</h2>
+          {pastDays.length > 3 && (
+            <button onClick={() => setShowAllHistory((v) => !v)} className="text-xs font-semibold text-primary hover:underline">
+              {showAllHistory ? "Show less" : "View Full History →"}
+            </button>
           )}
         </div>
+        {pastDays.length === 0 ? (
+          <p className="text-sm text-muted">No earlier records yet.</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {visiblePastDays.map(([key, records]) => {
+              const checkIn = records.find((r) => r.type === "CHECK_IN");
+              const checkOut = [...records].reverse().find((r) => r.type === "CHECK_OUT");
+              return (
+                <div key={key} className="flex items-center justify-between py-2.5 text-sm">
+                  <span className="font-medium text-foreground">
+                    {new Date(key).toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" })}
+                  </span>
+                  <span className="text-muted">{checkIn ? formatTime(checkIn.occurredAt) : "—"} – {checkOut ? formatTime(checkOut.occurredAt) : "—"}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

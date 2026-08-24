@@ -54,9 +54,15 @@ export default function CohortTasksPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2">
-          <CreateTaskForm cohortId={id} onCreated={load} />
+          {cohort?.isActive ? (
+            <CreateTaskForm cohortId={id} onCreated={load} />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-white p-6">
+              <p className="text-sm font-semibold text-foreground mb-1">This cohort is archived</p>
+              <p className="text-sm text-muted">New tasks can't be created here. Existing tasks are still listed for reference.</p>
+            </div>
+          )}
         </div>
-
         <div className="bg-white border border-border rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <h2 className="font-semibold text-foreground">Recent Tasks</h2>
@@ -74,9 +80,8 @@ export default function CohortTasksPage({
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <p className="text-sm font-semibold text-foreground">{task.title}</p>
                     <span
-                      className={`text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${
-                        task.state === "PUBLISHED" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
-                      }`}
+                      className={`text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${task.state === "PUBLISHED" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                        }`}
                     >
                       {task.state === "PUBLISHED" ? "Published" : "Draft"}
                     </span>

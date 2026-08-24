@@ -20,6 +20,14 @@ export async function POST(
     return NextResponse.json({ error: "Task is already published" }, { status: 400 });
   }
 
+  const cohort = await prisma.cohort.findUnique({ where: { id: task.cohortId } });
+  if (!cohort || !cohort.isActive) {
+    return NextResponse.json(
+      { error: "This cohort is archived — tasks can't be published here." },
+      { status: 400 }
+    );
+  }
+
   const activeMembers = await prisma.membership.findMany({
     where: { cohortId: task.cohortId, isActive: true },
     select: { id: true },

@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { createTask, publishTask, generateTaskDraft } from "@/lib/api";
+
+
 import { MarkdownText } from "@/components/MarkdownText";
+
+const MAX_TOPIC_LENGTH = 300;
 
 export function CreateTaskForm({
   cohortId,
@@ -98,25 +102,36 @@ export function CreateTaskForm({
         </p>
         <textarea
           value={topic}
-          onChange={(e) => setTopic(e.target.value)}
+          onChange={(e) => setTopic(e.target.value.slice(0, MAX_TOPIC_LENGTH))}
+          maxLength={MAX_TOPIC_LENGTH}
           rows={2}
           placeholder="e.g. Intro to REST API design — teach them how to structure endpoints and status codes"
           className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-white"
         />
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={generating}
-          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-        >
-          {generating ? "Generating…" : "Generate Draft"}
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating}
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {generating ? "Generating…" : "Generate Draft"}
+          </button>
+          <span className="text-xs text-muted">{topic.length}/{MAX_TOPIC_LENGTH}</span>
+        </div>
+        {genError && <p className="text-sm text-red-600">{genError}</p>}
         {genError && <p className="text-sm text-red-600">{genError}</p>}
       </div>
+
 
       {isAiDraft && (
         <p className="text-xs font-medium text-accent bg-accent-soft inline-block rounded-full px-2.5 py-1">
           AI draft — review and edit before saving
+        </p>
+      )}
+      {isAiDraft && (
+        <p className="text-xs text-muted">
+          AI can make mistakes — check the details, dates, and technical accuracy before publishing.
         </p>
       )}
 
@@ -132,29 +147,6 @@ export function CreateTaskForm({
           className="w-full rounded-lg border border-border px-3 py-2 text-sm"
         />
       </div>
-
-      {/* <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Start date</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">End date</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            required
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
-          />
-        </div>
-      </div> */}
 
       <div>
         <div className="flex items-center justify-between mb-1">
@@ -191,7 +183,7 @@ export function CreateTaskForm({
       </div>
 
 
-      
+
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-2 gap-4">

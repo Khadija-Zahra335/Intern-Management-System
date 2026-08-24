@@ -23,6 +23,12 @@ export async function POST(
   if (!cohort) {
     return NextResponse.json({ error: "Cohort not found" }, { status: 404 });
   }
+  if (!cohort.isActive) {
+    return NextResponse.json(
+      { error: "This cohort is archived — interns can't be added." },
+      { status: 400 }
+    );
+  }
 
   const intern = await prisma.user.findUnique({
     where: { email: parsed.data.email },

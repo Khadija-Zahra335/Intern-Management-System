@@ -301,8 +301,7 @@ export default function MyTasksPage() {
             <div className="mb-8">
               <button
                 onClick={() => setShowCompleted((s) => !s)}
-                className="w-full flex items-center justify-between bg-white border border-border rounded-xl px-4 py-3 mb-3 hover:border-primary transition-colors"
-              >
+                className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3 mb-3 hover:border-primary transition-colors">
                 <span className="text-sm font-semibold text-foreground">Completed ({completed.length})</span>
                 <ChevronDownIcon className={`w-4 h-4 text-muted transition-transform ${showCompleted ? "rotate-180" : ""}`} />
               </button>

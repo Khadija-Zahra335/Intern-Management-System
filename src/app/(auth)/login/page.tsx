@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login, saveToken } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-
+import Image from "next/image";
 export default function LoginPage() {
   const router = useRouter();
   const { refreshUser } = useAuth();
@@ -32,8 +32,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
-      <div className="flex items-center gap-2 mb-8">
-        <span className="w-2 h-2 rounded-full bg-accent" />
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 relative shrink-0">
+          <Image src="/logo.png" alt="Musketeer Tech logo" fill className="object-contain" priority />
+        </div>
         <span className="font-extrabold text-lg tracking-tight text-foreground">Musketeer Tech</span>
       </div>
       <form onSubmit={handleSubmit} className="w-full max-w-sm bg-white border border-border rounded-2xl shadow-lg shadow-primary/5 p-8">
@@ -55,7 +57,7 @@ export default function LoginPage() {
         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
           className="w-full mb-6 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
 
-        
+
         <button type="submit" disabled={loading}
           className="w-full rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold py-2.5 transition-colors disabled:opacity-60">
           {loading ? "Signing in..." : "Sign in"}

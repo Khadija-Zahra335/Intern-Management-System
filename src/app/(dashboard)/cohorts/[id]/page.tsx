@@ -111,11 +111,11 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
   const weeks =
     cohort != null
       ? Math.max(
-          1,
-          Math.round(
-            (new Date(cohort.endDate).getTime() - new Date(cohort.startDate).getTime()) / (7 * 24 * 60 * 60 * 1000)
-          )
+        1,
+        Math.round(
+          (new Date(cohort.endDate).getTime() - new Date(cohort.startDate).getTime()) / (7 * 24 * 60 * 60 * 1000)
         )
+      )
       : 0;
 
   const totalCompleted = rows.reduce((sum, r) => sum + r.taskCompletion.completed, 0);
@@ -137,9 +137,8 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
           <h1 className="text-2xl font-bold text-foreground">{cohort?.name ?? "Cohort"}</h1>
           {cohort && (
             <span
-              className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                cohort.isActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
-              }`}
+              className={`text-xs font-semibold px-3 py-1 rounded-full ${cohort.isActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                }`}
             >
               {cohort.isActive ? "Active" : "Archived"}
             </span>
@@ -152,7 +151,13 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
           >
             Manage tasks
           </Link>
-          <AddMemberForm cohortId={id} existingEmails={rows.map((r) => r.user.email)} onAdded={loadData} />
+          {cohort?.isActive ? (
+            <AddMemberForm cohortId={id} existingEmails={rows.map((r) => r.user.email)} onAdded={loadData} />
+          ) : (
+            <span className="text-xs font-medium text-muted bg-gray-100 rounded-lg px-4 py-2.5">
+              Archived — can&apos;t add interns
+            </span>
+          )}
         </div>
       </div>
 

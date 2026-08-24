@@ -1,13 +1,16 @@
 import Link from "next/link";
+import Image from "next/image";
 import { RoleTogglePreview } from "./RoleTogglePreview";
 
 export function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <nav className="border-b border-border bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="px-6 md:px-12 lg:px-16 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent" />
+            <div className="w-7 h-7 relative shrink-0">
+              <Image src="/logo.png" alt="Musketeer Tech logo" fill className="object-contain" priority />
+            </div>
             <span className="font-extrabold text-lg tracking-tight text-foreground">Musketeer Tech</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
@@ -28,38 +31,40 @@ export function HomePage() {
             maskImage: "radial-gradient(ellipse 60% 50% at 50% 0%, black 30%, transparent 80%)",
           }}
         />
-        <div className="relative max-w-3xl mx-auto px-6 pt-20 pb-10 text-center">
-          <div className="inline-flex items-center gap-1.5 mb-6 px-3 py-1 rounded-full text-xs font-semibold bg-accent-soft text-primary">
-            INTERNAL TOOL · MUSKETEER TECH
+        <div className="relative px-6 md:px-12 lg:px-16 pt-20 pb-20 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-1.5 mb-6 px-3 py-1 rounded-full text-xs font-semibold bg-accent-soft text-primary">
+              INTERNAL TOOL · MUSKETEER TECH
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.15] mb-5 text-foreground">
+              One system for how every{" "}
+              <span className="relative inline-block whitespace-nowrap">
+                <span className="relative z-10">internship cohort</span>
+                <span className="absolute left-[-2px] right-[-2px] bottom-1 h-3 bg-accent-soft rounded-sm -z-0" />
+              </span>{" "}
+              actually runs.
+            </h1>
+            <p className="text-muted text-base mb-9 max-w-lg">
+              Weekly tasks, progress check-ins, mentor feedback, and LinkedIn cadence —
+              tracked the same way, every week, for every cohort.
+            </p>
+            <div className="flex items-center gap-3">
+              <Link href="/login" className="rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-6 py-3 transition-colors">
+                Sign In
+              </Link>
+              <a href="#workflow" className="rounded-full bg-white border border-border text-foreground text-sm font-semibold px-6 py-3 hover:border-primary transition-colors">
+                See the Workflow ↓
+              </a>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.15] mb-5 text-foreground">
-            One system for how every{" "}
-            <span className="relative inline-block whitespace-nowrap">
-              <span className="relative z-10">internship cohort</span>
-              <span className="absolute left-[-2px] right-[-2px] bottom-1 h-3 bg-accent-soft rounded-sm -z-0" />
-            </span>{" "}
-            actually runs.
-          </h1>
-          <p className="text-muted text-base mb-9 max-w-lg mx-auto">
-            Weekly tasks, progress check-ins, mentor feedback, and LinkedIn cadence —
-            tracked the same way, every week, for every cohort.
-          </p>
-          <div className="flex items-center justify-center gap-3 mb-10">
-            <Link href="/login" className="rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-6 py-3 transition-colors">
-              Sign In
-            </Link>
-            <a href="#workflow" className="rounded-full bg-white border border-border text-foreground text-sm font-semibold px-6 py-3 hover:border-primary transition-colors">
-              See the Workflow ↓
-            </a>
-          </div>
-        </div>
 
-        <div className="relative max-w-3xl mx-auto px-6 pb-20">
-          <RoleTogglePreview />
+          <div>
+            <RoleTogglePreview />
+          </div>
         </div>
       </section>
 
-      <section id="workflow" className="max-w-6xl mx-auto px-6 pb-20">
+      <section id="workflow" className="px-6 md:px-12 lg:px-16 pb-20">
         <p className="text-center text-xs font-semibold text-primary mb-2 tracking-wide">THE WEEKLY CYCLE</p>
         <h2 className="text-2xl font-bold text-center mb-12 text-foreground">The same loop, every week, for every cohort</h2>
         <div className="grid md:grid-cols-4 gap-6 relative">
@@ -82,7 +87,7 @@ export function HomePage() {
       </section>
 
       <section className="bg-accent-soft py-14">
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="px-6 md:px-12 lg:px-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
             { value: "11", label: "Data models tracked" },
             { value: "2", label: "Roles, fully separated" },
@@ -98,7 +103,7 @@ export function HomePage() {
       </section>
 
       <section className="py-20 text-white bg-dark-bg">
-        <div className="max-w-5xl mx-auto px-6 grid md:grid-cols-5 gap-12">
+        <div className="px-6 md:px-12 lg:px-16 grid md:grid-cols-5 gap-12">
           <div className="md:col-span-2">
             <p className="text-xs font-semibold mb-4 tracking-wide text-accent">WHY IT&apos;S BUILT THIS WAY</p>
             <p className="text-2xl font-semibold leading-snug">
@@ -126,7 +131,7 @@ export function HomePage() {
       </section>
 
       <footer className="py-8 border-t border-border">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between text-sm text-muted">
+        <div className="px-6 md:px-12 lg:px-16 flex items-center justify-between text-sm text-muted">
           <span>© 2026 Musketeer Tech — Internal Use Only</span>
           <span>Intern Management Platform</span>
         </div>

@@ -6,8 +6,9 @@ import {
   deriveAttendanceState,
   computeDailyWorkHours,
   groupAttendanceByDay,
-  type SessionState,
+  ATTENDANCE_VALID_FROM,
 } from "@/lib/attendanceHours";
+import { pktDayKey } from "@/lib/timezone";
 import {
   getMyMemberships,
   getAttendance,
@@ -19,15 +20,15 @@ import {
 
 type Tone = "primary" | "danger" | "amber" | "gray" | "blue";
 
-const ALL_ACTIONS: { type: AttendanceType; label: string; tone: Tone; validFrom: SessionState }[] = [
-  { type: "CHECK_IN", label: "Check In", tone: "primary", validFrom: "OUT" },
-  { type: "CHECK_OUT", label: "Check Out", tone: "danger", validFrom: "IN" },
-  { type: "LUNCH_START", label: "Start Lunch", tone: "amber", validFrom: "IN" },
-  { type: "LUNCH_END", label: "End Lunch", tone: "amber", validFrom: "LUNCH" },
-  { type: "AFK_START", label: "Go AFK", tone: "gray", validFrom: "IN" },
-  { type: "AFK_END", label: "Back from AFK", tone: "gray", validFrom: "AFK" },
-  { type: "RELAX_START", label: "Start Break", tone: "blue", validFrom: "IN" },
-  { type: "RELAX_END", label: "End Break", tone: "blue", validFrom: "RELAX" },
+const ALL_ACTIONS: { type: AttendanceType; label: string; tone: Tone }[] = [
+  { type: "CHECK_IN", label: "Check In", tone: "primary" },
+  { type: "CHECK_OUT", label: "Check Out", tone: "danger" },
+  { type: "LUNCH_START", label: "Start Lunch", tone: "amber" },
+  { type: "LUNCH_END", label: "End Lunch", tone: "amber" },
+  { type: "AFK_START", label: "Go AFK", tone: "gray" },
+  { type: "AFK_END", label: "Back from AFK", tone: "gray" },
+  { type: "RELAX_START", label: "Start Break", tone: "blue" },
+  { type: "RELAX_END", label: "End Break", tone: "blue" },
 ];
 
 const STATE_LABEL: Record<string, string> = {
@@ -196,7 +197,7 @@ export default function AttendancePage() {
 
   const grouped = groupAttendanceByDay(records);
   const dailyHours = computeDailyWorkHours(records);
-  const todayKey = new Date().toLocaleDateString("en-CA");
+ const todayKey = pktDayKey(new Date());
   const todayRecords = (grouped.get(todayKey) ?? []).slice().reverse();
   const pastDayKeys = Array.from(grouped.keys())
     .filter((k) => k !== todayKey)
@@ -232,7 +233,7 @@ export default function AttendancePage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {ALL_ACTIONS.map((a) => {
                 const Icon = ACTION_ICONS[a.type];
-                const isValid = state === a.validFrom;
+               const isValid = state === ATTENDANCE_VALID_FROM[a.type];
                 const disabled = pendingType !== null || !isValid;
                 return (
                   <button

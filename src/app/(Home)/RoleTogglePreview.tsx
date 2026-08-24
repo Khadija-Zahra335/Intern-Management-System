@@ -6,7 +6,7 @@ export function RoleTogglePreview() {
   const [role, setRole] = useState<"mentor" | "intern">("mentor");
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="max-w-xl">
       <div className="flex justify-center mb-5">
         <div className="inline-flex items-center bg-white border border-border rounded-full p-1">
           <button
