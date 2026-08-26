@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Assignment, Feedback, giveFeedback } from "@/lib/api";
+import { Assignment, Feedback, giveFeedback, getWeeklyInsight, WeeklyInsight } from "@/lib/api";
 
 function StarRow({ rating }: { rating: number }) {
   return (
@@ -33,6 +33,25 @@ export function FeedbackTab({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const [insight, setInsight] = useState<WeeklyInsight | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [insightError, setInsightError] = useState("");
+
+  async function handleGetInsight() {
+    if (!weekNumber) return;
+    setInsightLoading(true);
+    setInsightError("");
+    setInsight(null);
+    try {
+      const result = await getWeeklyInsight(membershipId, Number(weekNumber));
+      setInsight(result);
+    } catch (err) {
+      setInsightError(err instanceof Error ? err.message : "Failed to load AI insight");
+    } finally {
+      setInsightLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!weekNumber || !rating || !comment) {
@@ -46,6 +65,8 @@ export function FeedbackTab({
       setWeekNumber("");
       setRating(null);
       setComment("");
+      setInsight(null);
+      setInsightError("");
       setShowForm(false);
       onSaved();
     } catch (err) {
@@ -112,9 +133,50 @@ export function FeedbackTab({
               type="number"
               min={1}
               value={weekNumber}
-              onChange={(e) => setWeekNumber(e.target.value)}
+              onChange={(e) => {
+                setWeekNumber(e.target.value);
+                setInsight(null);
+                setInsightError("");
+              }}
               className="border border-border rounded-lg px-3 py-2 w-32 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
             />
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleGetInsight}
+              disabled={!weekNumber || insightLoading}
+              className="text-sm font-medium text-primary border border-primary rounded-lg px-3 py-1.5 hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-primary"
+            >
+              {insightLoading ? "Generating..." : "Get AI insight for this week"}
+            </button>
+
+            {insightError && <p className="text-red-600 text-xs mt-2">{insightError}</p>}
+
+            {insight && (
+              <div className="mt-3 bg-accent-soft border border-border rounded-xl p-4">
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-1.5">
+                  AI weekly insight — read-only, write your own feedback below
+                </p>
+                <p className="text-sm text-foreground leading-relaxed">{insight.summary}</p>
+                {insight.hasActivity && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-muted">
+                    <span>
+                      {insight.stats.tasksCompleted}/{insight.stats.tasksAssigned} tasks completed
+                    </span>
+                    {insight.stats.tasksBlocked > 0 && (
+                      <span className="text-red-600">{insight.stats.tasksBlocked} blocked</span>
+                    )}
+                    {insight.stats.checkinNotes > 0 && (
+                      <span>
+                        {insight.stats.checkinNotes} check-in note{insight.stats.checkinNotes === 1 ? "" : "s"}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div>

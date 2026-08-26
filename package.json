@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "rag:generate-chunks": "tsx scripts/rag/generate-chunks.ts",
+    "rag:embed-upsert": "tsx scripts/rag/embed-upsert.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
@@ -22,7 +24,9 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "resend": "^6.22.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@pinecone-database/pinecone": "8.2.0",
+    "cohere-ai": "^8.0.0"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.16.0",
@@ -41,4 +45,3 @@
     "typescript": "^5"
   }
 }
-

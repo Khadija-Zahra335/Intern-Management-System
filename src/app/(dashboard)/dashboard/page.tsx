@@ -10,6 +10,7 @@ import {
     PendingReview,
 } from "@/lib/api";
 import { CreateCohortForm } from "@/app/(dashboard)/cohorts/CreateCohortForm";
+import { AssistantPanel } from "@/components/AssistantPanel";
 
 export default function DashboardPage() {
     const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -43,167 +44,171 @@ export default function DashboardPage() {
     if (!summary) return null;
 
     return (
-        <div>
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                    <p className="text-sm text-muted">Overview across all cohorts.</p>
-                </div>
-                <button
-  onClick={() => setShowForm(true)}
-  className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2.5"
->
-  + New Cohort
-</button>
-            </div>
-
-            {showForm && (
-                <CreateCohortForm
-                    onCreated={() => {
-                        setShowForm(false);
-                        loadAll();
-                    }}
-                    onClose={() => setShowForm(false)}
-                />
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <StatTile label="Active interns" value={summary.activeInterns} swatch="bg-accent-soft text-primary" icon={IconUsers} />
-                <StatTile
-                    label="Tasks published"
-                    value={summary.tasksPublishedThisWeek}
-                    hint="This week across cohorts"
-                    swatch="bg-blue-50 text-blue-600"
-                    icon={IconChecklist}
-                />
-                <StatTile
-                    label="Avg. rating"
-                    value={summary.avgRating ?? "—"}
-                    swatch="bg-amber-50 text-amber-700"
-                    icon={IconStar}
-                />
-                <StatTile
-                    label="LinkedIn posts"
-                    value={summary.linkedInPostsThisWeek}
-                    hint="Logged this week"
-                    swatch="bg-green-50 text-green-700"
-                    icon={IconLink}
-                />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-white border border-border rounded-2xl overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                        <h2 className="font-semibold text-foreground">Cohort progress</h2>
-                        <Link href="/cohorts" className="text-sm text-primary hover:underline">
-                            View all →
-                        </Link>
+        <div className="flex gap-6 items-start">
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+                        <p className="text-sm text-muted">Overview across all cohorts.</p>
                     </div>
-                    {summary.cohorts.length === 0 ? (
-                        <p className="text-sm text-muted px-5 py-6">No cohorts yet.</p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="text-left text-xs font-medium text-muted uppercase tracking-wide">
-                                        <th className="px-5 py-3">Cohort</th>
-                                        <th className="px-5 py-3">Interns</th>
-                                        <th className="px-5 py-3">Task completion</th>
-                                        <th className="px-5 py-3">LinkedIn</th>
-                                        <th className="px-5 py-3">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {summary.cohorts.map((c) => (
-                                        <tr key={c.id}>
-                                            <td className="px-5 py-4">
-                                                <Link href={`/cohorts/${c.id}`} className="font-medium text-foreground hover:text-primary">
-                                                    {c.name}
-                                                </Link>
-                                                <p className="text-xs text-muted mt-0.5">
-                                                   {formatDateRange(c.startDate, c.endDate)}
-                                                </p>
-                                            </td>
-                                            <td className="px-5 py-4 text-foreground">{c.internsCount}</td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-2 w-32">
-                                                    <div className="h-1.5 flex-1 rounded-full bg-border overflow-hidden">
-                                                        <div className="h-full bg-primary rounded-full" style={{ width: `${c.taskCompletionPercent}%` }} />
-                                                    </div>
-                                                    <span className="text-xs text-muted w-8 text-right">{c.taskCompletionPercent}%</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-2 w-32">
-                                                    <div className="h-1.5 flex-1 rounded-full bg-border overflow-hidden">
-                                                        <div className="h-full bg-accent rounded-full" style={{ width: `${c.linkedInCompletionPercent}%` }} />
-                                                    </div>
-                                                    <span className="text-xs text-muted w-8 text-right">{c.linkedInCompletionPercent}%</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                {c.status === "Active" ? (
-                                                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-accent-soft text-primary">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                                        Active
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-500">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                                                        Archived
-                                                    </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                    <button
+                        onClick={() => setShowForm(true)}
+                        className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2.5"
+                    >
+                        + New Cohort
+                    </button>
                 </div>
 
-                <div className="bg-white border border-border rounded-2xl overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                        <h2 className="font-semibold text-foreground">Pending reviews</h2>
-                        {pending.length > 0 && (
-                            <span className="bg-amber-50 text-amber-700 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                {pending.length}
-                            </span>
+                {showForm && (
+                    <CreateCohortForm
+                        onCreated={() => {
+                            setShowForm(false);
+                            loadAll();
+                        }}
+                        onClose={() => setShowForm(false)}
+                    />
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <StatTile label="Active interns" value={summary.activeInterns} swatch="bg-accent-soft text-primary" icon={IconUsers} />
+                    <StatTile
+                        label="Tasks published"
+                        value={summary.tasksPublishedThisWeek}
+                        hint="This week across cohorts"
+                        swatch="bg-blue-50 text-blue-600"
+                        icon={IconChecklist}
+                    />
+                    <StatTile
+                        label="Avg. rating"
+                        value={summary.avgRating ?? "—"}
+                        swatch="bg-amber-50 text-amber-700"
+                        icon={IconStar}
+                    />
+                    <StatTile
+                        label="LinkedIn posts"
+                        value={summary.linkedInPostsThisWeek}
+                        hint="Logged this week"
+                        swatch="bg-green-50 text-green-700"
+                        icon={IconLink}
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <div className="lg:col-span-2 bg-white border border-border rounded-2xl overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                            <h2 className="font-semibold text-foreground">Cohort progress</h2>
+                            <Link href="/cohorts" className="text-sm text-primary hover:underline">
+                                View all →
+                            </Link>
+                        </div>
+                        {summary.cohorts.length === 0 ? (
+                            <p className="text-sm text-muted px-5 py-6">No cohorts yet.</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="text-left text-xs font-medium text-muted uppercase tracking-wide">
+                                            <th className="px-3 py-2.5">Cohort</th>
+                                            <th className="px-3 py-2.5">Interns</th>
+                                            <th className="px-3 py-2.5">Task completion</th>
+                                            <th className="px-3 py-2.5">LinkedIn</th>
+                                            <th className="px-3 py-2.5">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {summary.cohorts.map((c) => (
+                                            <tr key={c.id}>
+                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                    <Link href={`/cohorts/${c.id}`} className="font-medium text-foreground hover:text-primary">
+                                                        {c.name}
+                                                    </Link>
+                                                    <p className="text-xs text-muted mt-0.5">
+                                                        {formatDateRange(c.startDate, c.endDate)}
+                                                    </p>
+                                                </td>
+                                                <td className="px-3 py-3 text-foreground">{c.internsCount}</td>
+                                                <td className="px-3 py-3">
+                                                    <div className="flex items-center gap-1.5 w-20">
+                                                        <div className="h-1.5 flex-1 rounded-full bg-border overflow-hidden">
+                                                            <div className="h-full bg-primary rounded-full" style={{ width: `${c.taskCompletionPercent}%` }} />
+                                                        </div>
+                                                        <span className="text-xs text-muted w-8 text-right">{c.taskCompletionPercent}%</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <div className="flex items-center gap-1.5 w-20">
+                                                        <div className="h-1.5 flex-1 rounded-full bg-border overflow-hidden">
+                                                            <div className="h-full bg-accent rounded-full" style={{ width: `${c.linkedInCompletionPercent}%` }} />
+                                                        </div>
+                                                        <span className="text-xs text-muted w-8 text-right">{c.linkedInCompletionPercent}%</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                    {c.status === "Active" ? (
+                                                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-accent-soft text-primary">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                                            Active
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-500">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                                                            Archived
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
-                    {pending.length === 0 ? (
-                        <p className="text-sm text-muted px-5 py-6">Nothing waiting on review.</p>
-                    ) : (
-                        <div className="divide-y divide-border">
-                            {pending.map((p) => (
-                                <div key={p.assignmentId} className="px-5 py-4">
-                                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <div className="w-7 h-7 rounded-full bg-accent-soft text-primary flex items-center justify-center text-[11px] font-bold shrink-0">
-                                                {p.intern.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <p className="text-sm font-medium text-foreground truncate">{p.intern.name}</p>
-                                        </div>
-                                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 shrink-0">
-                                            Pending
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-muted mb-1">Task: {p.task.title}</p>
-                                    <div className="flex items-center justify-between mt-2">
-                                        <p className="text-xs text-muted">{new Date(p.submittedAt).toLocaleDateString()}</p>
-                                        <Link
-                                            href={`/cohorts/${p.cohort.id}/dashboard/${p.membershipId}?tab=submissions`}
-                                            className="text-xs font-semibold text-primary border border-primary rounded-lg px-3 py-1.5 hover:bg-primary hover:text-white transition-colors"
-                                        >
-                                            Review
-                                        </Link>
-                                    </div>
-                                </div>
-                            ))}
+                    <div className="bg-white border border-border rounded-2xl overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                            <h2 className="font-semibold text-foreground">Pending reviews</h2>
+                            {pending.length > 0 && (
+                                <span className="bg-amber-50 text-amber-700 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                    {pending.length}
+                                </span>
+                            )}
                         </div>
-                    )}
+                        {pending.length === 0 ? (
+                            <p className="text-sm text-muted px-5 py-6">Nothing waiting on review.</p>
+                        ) : (
+                            <div className="divide-y divide-border">
+                                {pending.map((p) => (
+                                    <div key={p.assignmentId} className="px-5 py-4">
+                                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="w-7 h-7 rounded-full bg-accent-soft text-primary flex items-center justify-center text-[11px] font-bold shrink-0">
+                                                    {p.intern.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <p className="text-sm font-medium text-foreground truncate">{p.intern.name}</p>
+                                            </div>
+                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 shrink-0">
+                                                Pending
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-muted mb-1">Task: {p.task.title}</p>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <p className="text-xs text-muted">{new Date(p.submittedAt).toLocaleDateString()}</p>
+                                            <Link
+                                                href={`/cohorts/${p.cohort.id}/dashboard/${p.membershipId}?tab=submissions`}
+                                                className="text-xs font-semibold text-primary border border-primary rounded-lg px-3 py-1.5 hover:bg-primary hover:text-white transition-colors"
+                                            >
+                                                Review
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+
+            <AssistantPanel />
         </div>
     );
 }
