@@ -45,3 +45,4 @@ node_modules
 .agents
 .claude
 .windsurf
+scripts/rag/chunks.json

@@ -492,3 +492,19 @@ export async function uploadAttachment(submissionId: string, file: globalThis.Fi
 
   return res.json();
 } 
+
+// ---- Weekly insight endpoint ----
+export type WeeklyInsight = {
+  hasActivity: boolean;
+  summary: string;
+  stats: {
+    tasksAssigned: number;
+    tasksCompleted: number;
+    tasksBlocked: number;
+    checkinNotes: number;
+  };
+};
+
+export function getWeeklyInsight(membershipId: string, weekNumber: number) {
+  return request<WeeklyInsight>(`/insights/weekly?membershipId=${membershipId}&weekNumber=${weekNumber}`);
+}
