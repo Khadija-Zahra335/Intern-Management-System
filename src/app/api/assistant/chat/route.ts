@@ -17,14 +17,27 @@ const ANSWER_MODEL = "openai/gpt-oss-20b";
 
 const ALLOWED_ROLES = ["user", "assistant"];
 
-const GROUNDED_PROMPT = `You are an assistant helping a mentor review her interns' progress in a software engineering internship program, using real records pulled from the program's own database — task completion, ratings, mentor feedback comments, and check-in notes.
+// Used any time retrieval found at least one record — whether it's a
+// confident match or just the closest thing on file. One prompt, not two:
+// an earlier version split this into a "grounded" prompt and a separate
+// "partial match" prompt that was forced to open with a flat "I don't have
+// records for that" before describing the (often genuinely relevant) data
+// underneath it — e.g. asking "who needs improvement" would get "I don't
+// have records for that. [Then a full paragraph about the intern who's
+// blocked and behind.]" — a real answer, dressed up as a non-answer. That
+// self-contradiction is gone now: the model always leads with whatever the
+// records actually support, and only notes a coverage gap afterward, in
+// the same breath, if one exists — never as a standalone opening denial.
+const ANSWER_PROMPT = `You are an assistant helping a mentor review her interns' progress in a software engineering internship program, using real records pulled from the program's own database — task completion, ratings, mentor feedback comments, and check-in notes.
 
-Answer using ONLY the context provided below.
+Answer using ONLY the records provided below.
 
 Guidelines:
 - Answer mentor-to-mentor: clear, direct, and professional.
-- Do not add explanations or information from your own general knowledge.
-- If the context mentions something but doesn't go into detail, say so rather than filling in the gap.
+- Use whatever the records below actually show to answer as helpfully as you can — including when they only partially cover the question (e.g. they're about some interns or weeks but not others asked about).
+- Never lead with "I don't have records" or similar if there is genuinely relevant information below — give the real answer first. Only mention a gap in coverage afterward, briefly, and only if one actually exists.
+- If the records truly don't relate to the question at all, say so plainly and suggest asking about a specific intern, week, or cohort.
+- Do not add explanations or information from your own general knowledge, and never invent or guess a name, rating, or detail not present in the records.
 - Always say which intern and which week the information comes from.
 - Write in your own words rather than copying the records verbatim.
 - Keep answers under 250 words.
@@ -39,23 +52,6 @@ Guidelines:
 - Suggest asking about a specific intern, week, or cohort if that would help.
 - Do NOT answer from general knowledge, and do NOT guess or invent any name, rating, or detail.
 - Keep it under 60 words.`;
-
-// Used when retrieval found records, but none of them confidently answer
-// the specific question asked (e.g. the mentor asked about a week or
-// intern the data just doesn't cover yet). Rather than the same generic
-// "no records" reply every time, this tells the model what IS actually on
-// file so the mentor learns something useful either way — "no Week 3
-// feedback for Ahmed, but Week 2 is on file" beats a blanket refusal.
-const PARTIAL_MATCH_PROMPT = `You are an assistant helping a mentor review her interns' progress in a software engineering internship program, using real records pulled from the program's own database.
-
-None of the records below confidently answer this specific question, but they are the closest related records that actually exist in the database.
-
-Guidelines:
-- Do not treat the records below as if they answer the question — they may be about the wrong week, intern, or topic.
-- Start by saying plainly that you don't have records that directly answer this specific question.
-- Then, in one short sentence, say what the records below actually cover (which intern and week) so the mentor knows what's on file instead.
-- Do NOT answer from general knowledge, and do NOT invent or guess any name, rating, or detail not present in the records below.
-- Keep it under 100 words.`;
 
 function validateMessages(messages: unknown): string | null {
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -128,11 +124,8 @@ export async function POST(req: NextRequest) {
         (chunks.length ? ` (top ${chunks[0].score.toFixed(3)})` : "")
     );
 
-       const systemPrompt = grounded
-      ? `${GROUNDED_PROMPT}\n\nRECORDS:\n\n${formatContext(chunks)}`
-      : chunks.length > 0
-        ? `${PARTIAL_MATCH_PROMPT}\n\nRECORDS:\n\n${formatContext(chunks)}`
-        : NO_MATCH_PROMPT;
+           const systemPrompt =
+      chunks.length > 0 ? `${ANSWER_PROMPT}\n\nRECORDS:\n\n${formatContext(chunks)}` : NO_MATCH_PROMPT;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 
