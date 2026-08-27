@@ -155,6 +155,15 @@ export function addCohortMember(cohortId: string, email: string) {
   });
 }
 
+// Removes an intern from a cohort (soft — Membership.isActive: false, all
+// their history is kept). Re-adding them later via addCohortMember
+// reactivates this same membership.
+export function removeCohortMember(cohortId: string, membershipId: string) {
+  return request<Membership>(`/cohorts/${cohortId}/members/${membershipId}`, {
+    method: "DELETE",
+  });
+}
+
 
 export type TaskState = "DRAFT" | "PUBLISHED";
 
@@ -213,6 +222,23 @@ export type TaskAssignmentRow = {
 
 export function getTaskAssignments(taskId: string) {
   return request<TaskAssignmentRow[]>(`/tasks/${taskId}/assignments`);
+}
+
+// Assigns this task to one intern directly (independent of publish-time
+// bulk assignment or the cohort-membership backfill).
+export function assignTaskToMember(taskId: string, membershipId: string) {
+  return request<unknown>(`/tasks/${taskId}/assignments`, {
+    method: "POST",
+    body: JSON.stringify({ membershipId }),
+  });
+}
+
+// Unassigns one intern from this task — hard delete, takes their
+// submissions/activity on this task with it (see the route's comment).
+export function removeTaskAssignment(taskId: string, membershipId: string) {
+  return request<{ success: boolean }>(`/tasks/${taskId}/assignments/${membershipId}`, {
+    method: "DELETE",
+  });
 }
 
 

@@ -1,20 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { createTask, publishTask, generateTaskDraft } from "@/lib/api";
+import { createTask, publishTask, generateTaskDraft, type Cohort } from "@/lib/api";
 
 
 import { MarkdownText } from "@/components/MarkdownText";
+import { formatDateRange } from "@/lib/format";
 
 const MAX_TOPIC_LENGTH = 300;
 
 export function CreateTaskForm({
   cohortId,
+  cohort,
   onCreated,
 }: {
   cohortId: string;
+  cohort: Pick<Cohort, "startDate" | "endDate">;
   onCreated: () => void;
 }) {
+  // Task dates must fall inside the cohort's own program dates — enforced
+  // server-side (see POST /api/tasks), these are just min/max on the
+  // pickers so a mentor doesn't hit the error after filling out the form.
+  const cohortStartDay = cohort.startDate.slice(0, 10);
+  const cohortEndDay = cohort.endDate.slice(0, 10);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -193,6 +201,8 @@ export function CreateTaskForm({
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            min={cohortStartDay}
+            max={cohortEndDay}
             required
             className="w-full rounded-lg border border-border px-3 py-2 text-sm"
           />
@@ -203,10 +213,15 @@ export function CreateTaskForm({
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
+            min={cohortStartDay}
+            max={cohortEndDay}
             required
             className="w-full rounded-lg border border-border px-3 py-2 text-sm"
           />
         </div>
+        <p className="col-span-2 text-xs text-muted -mt-2">
+          Must fall within the cohort&apos;s program dates: {formatDateRange(cohort.startDate, cohort.endDate)}.
+        </p>
       </div>
 
       <div className="flex items-center gap-3 pt-1">

@@ -80,6 +80,10 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string;
   }
 
   const isPublished = task?.state === "PUBLISHED";
+  // Same cohort-date-range rule enforced server-side in PATCH /api/tasks/[id]
+  // — min/max here just save a round trip to that error.
+  const cohortStartDay = cohort?.startDate.slice(0, 10);
+  const cohortEndDay = cohort?.endDate.slice(0, 10);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -216,6 +220,8 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string;
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 disabled={isPublished}
+                min={cohortStartDay}
+                max={cohortEndDay}
                 required
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-muted"
               />
@@ -226,10 +232,18 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string;
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                min={cohortStartDay}
+                max={cohortEndDay}
                 required
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm"
               />
             </div>
+            {cohort && (
+              <p className="col-span-2 text-xs text-muted -mt-2">
+                Must fall within the cohort&apos;s program dates: {new Date(cohort.startDate).toLocaleDateString()} –{" "}
+                {new Date(cohort.endDate).toLocaleDateString()}.
+              </p>
+            )}
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

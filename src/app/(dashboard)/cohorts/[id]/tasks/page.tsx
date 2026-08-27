@@ -54,8 +54,8 @@ export default function CohortTasksPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2">
-          {cohort?.isActive ? (
-            <CreateTaskForm cohortId={id} onCreated={load} />
+          {cohort && cohort.isActive ? (
+            <CreateTaskForm cohortId={id} cohort={cohort} onCreated={load} />
           ) : (
             <div className="rounded-2xl border border-dashed border-border bg-white p-6">
               <p className="text-sm font-semibold text-foreground mb-1">This cohort is archived</p>

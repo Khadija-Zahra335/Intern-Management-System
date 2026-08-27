@@ -26,6 +26,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // A task has to live inside its cohort's program dates — nothing enforced
+  // this before, so a task could be created starting before the cohort even
+  // begins (or ending after it's over).
+  if (parsed.data.startDate < cohort.startDate) {
+    return NextResponse.json(
+      {
+        error: `Task start date can't be before the cohort's start date (${cohort.startDate.toISOString().slice(0, 10)})`,
+      },
+      { status: 400 }
+    );
+  }
+  if (parsed.data.endDate > cohort.endDate) {
+    return NextResponse.json(
+      {
+        error: `Task end date can't be after the cohort's end date (${cohort.endDate.toISOString().slice(0, 10)})`,
+      },
+      { status: 400 }
+    );
+  }
+
   const task = await prisma.task.create({
     data: {
       cohortId: parsed.data.cohortId,

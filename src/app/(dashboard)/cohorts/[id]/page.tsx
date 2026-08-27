@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { getCohorts, getCohortMembers, getCohortProgress, Cohort, MemberProgress } from "@/lib/api";
+import { getCohorts, getCohortMembers, getCohortProgress, removeCohortMember, Cohort, MemberProgress } from "@/lib/api";
 import { AddMemberForm } from "@/app/(dashboard)/cohorts/[id]/AddMemberForm";
 import { formatDateRange } from "@/lib/format";
 
@@ -71,6 +71,7 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
   const [rows, setRows] = useState<MemberRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   async function loadData() {
     setLoading(true);
@@ -84,13 +85,20 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
 
       const joinedById = new Map(memberships.map((m) => [m.id, m.joinedAt]));
       setRows(
-        progress.map((p) => {
-          const avgRating =
-            p.ratingHistory.length > 0
-              ? p.ratingHistory.reduce((sum, r) => sum + r.rating, 0) / p.ratingHistory.length
-              : null;
-          return { ...p, joinedAt: joinedById.get(p.membershipId) ?? "", avgRating };
-        })
+        progress
+          // /progress returns every membership ever (active or removed) —
+          // this list is "current members", so only show active ones. A
+          // removed intern's history is still intact in the DB, just not
+          // shown here (matches GET /members, which already filters the
+          // same way).
+          .filter((p) => p.isActive)
+          .map((p) => {
+            const avgRating =
+              p.ratingHistory.length > 0
+                ? p.ratingHistory.reduce((sum, r) => sum + r.rating, 0) / p.ratingHistory.length
+                : null;
+            return { ...p, joinedAt: joinedById.get(p.membershipId) ?? "", avgRating };
+          })
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load cohort");
@@ -102,6 +110,24 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     loadData();
   }, [id]);
+
+  // Soft removal — Membership.isActive: false, history untouched. See
+  // src/app/api/cohorts/[id]/members/[membershipId]/route.ts.
+  async function handleRemove(membershipId: string, name: string) {
+    if (!confirm(`Remove ${name} from this cohort? Their task/feedback/attendance history is kept — you can re-add them later by email.`)) {
+      return;
+    }
+    setRemovingId(membershipId);
+    setError(null);
+    try {
+      await removeCohortMember(id, membershipId);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove member");
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   if (loading) return <p className="text-sm text-muted">Loading...</p>;
   if (error) {
@@ -264,6 +290,13 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
                         >
                           Feedback
                         </Link>
+                        <button
+                          onClick={() => handleRemove(r.membershipId, r.user.name)}
+                          disabled={removingId === r.membershipId}
+                          className="text-xs font-semibold text-red-600 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                        >
+                          {removingId === r.membershipId ? "Removing…" : "Remove"}
+                        </button>
                       </div>
                     </td>
                   </tr>

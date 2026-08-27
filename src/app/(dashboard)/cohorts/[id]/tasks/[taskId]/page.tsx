@@ -7,11 +7,15 @@ import {
   getCohorts,
   getTasks,
   getTaskAssignments,
+  getCohortMembers,
+  assignTaskToMember,
+  removeTaskAssignment,
   publishTask,
   deleteTask,
   type Cohort,
   type Task,
   type TaskAssignmentRow,
+  type Membership,
 } from "@/lib/api";
 import { MarkdownText } from "@/components/MarkdownText";
 import { ActivityThread } from "@/components/ActivityThread";
@@ -54,27 +58,77 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const [cohort, setCohort] = useState<Cohort | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [assignments, setAssignments] = useState<TaskAssignmentRow[]>([]);
+  const [members, setMembers] = useState<Membership[]>([]);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [assignPick, setAssignPick] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [unassigningId, setUnassigningId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
     setError("");
     try {
-      const [cohorts, tasks, taskAssignments] = await Promise.all([
+      const [cohorts, tasks, taskAssignments, cohortMembers] = await Promise.all([
         getCohorts(),
         getTasks(id),
         getTaskAssignments(taskId),
+        getCohortMembers(id),
       ]);
       setCohort(cohorts.find((c) => c.id === id) ?? null);
       setTask(tasks.find((t) => t.id === taskId) ?? null);
       setAssignments(taskAssignments);
+      setMembers(cohortMembers);
     } catch (err: any) {
       setError(err.message ?? "Failed to load task");
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Cohort's currently-active members who aren't already assigned this
+  // task — candidates for the "Assign intern" picker below.
+  const unassignedMembers = members.filter(
+    (m) => !assignments.some((a) => a.membershipId === m.id)
+  );
+
+  async function handleAssign() {
+    if (!assignPick) return;
+    setAssigning(true);
+    setError("");
+    try {
+      await assignTaskToMember(taskId, assignPick);
+      setAssignPick("");
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to assign intern");
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  // Hard delete on the backend — takes that intern's submissions/activity
+  // on this task with it. See src/app/api/tasks/[id]/assignments/[membershipId]/route.ts.
+  async function handleUnassign(assignmentRow: TaskAssignmentRow) {
+    if (
+      !confirm(
+        `Unassign ${assignmentRow.intern.name} from this task? This deletes their submissions and activity on it — it can't be undone.`
+      )
+    ) {
+      return;
+    }
+    setUnassigningId(assignmentRow.membershipId);
+    setError("");
+    try {
+      await removeTaskAssignment(taskId, assignmentRow.membershipId);
+      if (selectedAssignmentId === assignmentRow.assignmentId) setSelectedAssignmentId(null);
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to unassign intern");
+    } finally {
+      setUnassigningId(null);
     }
   }
 
@@ -213,8 +267,31 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         />
 
         <div className="bg-white border border-border rounded-2xl flex flex-col overflow-hidden">
-          <div className="px-4 py-4 border-b border-border shrink-0">
+          <div className="px-4 py-4 border-b border-border shrink-0 space-y-2">
             <p className="text-sm font-bold text-foreground">Interns</p>
+            {task.state === "PUBLISHED" && unassignedMembers.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={assignPick}
+                  onChange={(e) => setAssignPick(e.target.value)}
+                  className="flex-1 min-w-0 rounded-lg border border-border px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                >
+                  <option value="">Assign an intern…</option>
+                  {unassignedMembers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.user.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleAssign}
+                  disabled={!assignPick || assigning}
+                  className="shrink-0 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-1.5 disabled:opacity-50"
+                >
+                  {assigning ? "Adding…" : "Add"}
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {assignments.length === 0 ? (
@@ -225,22 +302,34 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               assignments.map((a) => {
                 const palette = avatarPalette(a.membershipId);
                 return (
-                  <button
+                  <div
                     key={a.assignmentId}
-                    onClick={() => setSelectedAssignmentId(a.assignmentId)}
-                    className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-lg transition-colors border ${selectedAssignmentId === a.assignmentId ? "bg-accent-soft border-accent" : "border-transparent hover:bg-accent-soft/50"
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors border ${selectedAssignmentId === a.assignmentId ? "bg-accent-soft border-accent" : "border-transparent hover:bg-accent-soft/50"
                       }`}
                   >
-                    <div className={`w-8 h-8 rounded-full ${palette.bg} ${palette.text} flex items-center justify-center text-xs font-bold shrink-0`}>
-                      {a.intern.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-foreground truncate">{a.intern.name}</p>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-500"}`}>
-                        {STATUS_LABELS[a.status] ?? a.status}
-                      </span>
-                    </div>
-                  </button>
+                    <button
+                      onClick={() => setSelectedAssignmentId(a.assignmentId)}
+                      className="flex items-center gap-3 text-left flex-1 min-w-0"
+                    >
+                      <div className={`w-8 h-8 rounded-full ${palette.bg} ${palette.text} flex items-center justify-center text-xs font-bold shrink-0`}>
+                        {a.intern.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-foreground truncate">{a.intern.name}</p>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-500"}`}>
+                          {STATUS_LABELS[a.status] ?? a.status}
+                        </span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleUnassign(a)}
+                      disabled={unassigningId === a.membershipId}
+                      title={`Unassign ${a.intern.name} from this task`}
+                      className="shrink-0 text-muted hover:text-red-600 disabled:opacity-50 text-sm leading-none px-1.5 py-1"
+                    >
+                      {unassigningId === a.membershipId ? "…" : "×"}
+                    </button>
+                  </div>
                 );
               })
             )}

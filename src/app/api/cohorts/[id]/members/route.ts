@@ -47,14 +47,60 @@ export async function POST(
     );
   }
 
+  // A prior Membership row for this (user, cohort) pair may already exist and
+  // just be inactive (the intern was removed earlier — see the DELETE handler
+  // in members/[membershipId]/route.ts). The unique constraint is on
+  // (userId, cohortId) regardless of isActive, so a plain create() would 409
+  // even though re-adding them is exactly what the mentor is asking for here.
+  const existing = await prisma.membership.findUnique({
+    where: { userId_cohortId: { userId: intern.id, cohortId } },
+  });
+
+  if (existing?.isActive) {
+    return NextResponse.json(
+      { error: "This intern is already a member of this cohort" },
+      { status: 409 }
+    );
+  }
+
   try {
-    const membership = await prisma.membership.create({
-      data: { userId: intern.id, cohortId },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-      },
+    // Create (or reactivate) the membership, then backfill TaskAssignment
+    // rows for every already-PUBLISHED task in this cohort — mirrors the
+    // exact pattern used in POST /api/tasks/[id]/publish. Without this, an
+    // intern added (or re-added) after tasks have been published would have
+    // an active Membership but zero assignments, so their task list would be
+    // empty even though the mentor can see the published tasks.
+    const membership = await prisma.$transaction(async (tx) => {
+      const membership = existing
+        ? await tx.membership.update({
+            where: { id: existing.id },
+            data: { isActive: true },
+            include: { user: { select: { id: true, name: true, email: true } } },
+          })
+        : await tx.membership.create({
+            data: { userId: intern.id, cohortId },
+            include: { user: { select: { id: true, name: true, email: true } } },
+          });
+
+      const publishedTasks = await tx.task.findMany({
+        where: { cohortId, state: "PUBLISHED" },
+        select: { id: true },
+      });
+
+      if (publishedTasks.length > 0) {
+        await tx.taskAssignment.createMany({
+          data: publishedTasks.map((t) => ({
+            taskId: t.id,
+            membershipId: membership.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return membership;
     });
-    return NextResponse.json(membership, { status: 201 });
+
+    return NextResponse.json(membership, { status: existing ? 200 : 201 });
   } catch (err: any) {
     if (err.code === "P2002") {
       return NextResponse.json(

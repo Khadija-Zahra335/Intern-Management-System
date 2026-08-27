@@ -18,6 +18,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
+  const cohort = await prisma.cohort.findUnique({ where: { id: task.cohortId } });
+  if (!cohort) {
+    return NextResponse.json({ error: "Cohort not found" }, { status: 404 });
+  }
+
   const body = await req.json();
   const parsed = updateTaskSchema.safeParse(body);
   if (!parsed.success) {
@@ -40,6 +45,27 @@ export async function PATCH(
   const newEnd = fields.endDate ?? task.endDate;
   if (newStart && newEnd && newEnd <= newStart) {
     return NextResponse.json({ error: "endDate must be after startDate" }, { status: 400 });
+  }
+
+  // Same cohort-date-range rule as task creation (see POST /api/tasks) —
+  // this was missing here too, so a draft's dates (or a published task's
+  // endDate extension) could be edited to fall outside the cohort's
+  // program dates entirely.
+  if (newStart && newStart < cohort.startDate) {
+    return NextResponse.json(
+      {
+        error: `Task start date can't be before the cohort's start date (${cohort.startDate.toISOString().slice(0, 10)})`,
+      },
+      { status: 400 }
+    );
+  }
+  if (newEnd && newEnd > cohort.endDate) {
+    return NextResponse.json(
+      {
+        error: `Task end date can't be after the cohort's end date (${cohort.endDate.toISOString().slice(0, 10)})`,
+      },
+      { status: 400 }
+    );
   }
 
   const updated = await prisma.task.update({ where: { id }, data: fields });
