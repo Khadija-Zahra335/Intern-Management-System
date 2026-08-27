@@ -54,73 +54,155 @@ export function OverviewTab({
   const percent = assignments.length > 0 ? Math.round((completed / assignments.length) * 100) : 0;
   const linkedInWeeks = Array.from(new Set(linkedInPosts.map((p) => p.weekNumber))).sort((a, b) => a - b);
   const latestRating = ratingHistory.length > 0 ? ratingHistory[ratingHistory.length - 1] : null;
+  const overdueCount = assignments.filter((a) => isOverdue(a.status, a.task.endDate)).length;
+  const avgRating =
+    ratingHistory.length > 0 ? ratingHistory.reduce((sum, r) => sum + r.rating, 0) / ratingHistory.length : null;
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Task completion</p>
-          <p className="text-3xl font-bold text-foreground">{percent}%</p>
-          <div className="h-1.5 rounded-full bg-border overflow-hidden mt-3">
-            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${percent}%` }} />
-          </div>
-          <p className="text-xs text-muted mt-2">
-            {completed} of {assignments.length} tasks
-          </p>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <StatTile
+          label="Task completion"
+          value={`${percent}%`}
+          hint={`${completed} of ${assignments.length} tasks`}
+          swatch="bg-accent-soft text-primary"
+          icon={IconChecklist}
+        />
+        <StatTile
+          label="Overdue tasks"
+          value={overdueCount}
+          hint="Past due, not submitted"
+          swatch="bg-red-50 text-red-600"
+          icon={IconAlert}
+        />
+        <StatTile
+          label="Avg rating"
+          value={avgRating != null ? avgRating.toFixed(1) : "—"}
+          hint={ratingHistory.length > 0 ? `${ratingHistory.length} week${ratingHistory.length === 1 ? "" : "s"} rated` : "No ratings yet"}
+          swatch="bg-amber-50 text-amber-700"
+          icon={IconStar}
+        />
+        <StatTile
+          label="Latest rating"
+          value={latestRating ? <StarRow rating={latestRating.rating} size="w-4 h-4" /> : "—"}
+          hint={latestRating ? `Week ${latestRating.weekNumber}` : "No rating yet"}
+          swatch="bg-amber-50 text-amber-700"
+          icon={IconStar}
+        />
+        <StatTile
+          label="LinkedIn cadence"
+          value={linkedInWeeks.length}
+          hint={linkedInWeeks.length === 0 ? "No posts logged" : `Weeks: ${linkedInWeeks.join(", ")}`}
+          swatch="bg-green-50 text-green-700"
+          icon={IconLink}
+        />
+      </div>
 
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Latest rating</p>
-          {latestRating ? (
-            <>
-              <StarRow rating={latestRating.rating} />
-              <p className="text-xs text-muted mt-3">Week {latestRating.weekNumber}</p>
-            </>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div>
+          <h2 className="text-lg font-medium text-foreground mb-3">Tasks</h2>
+          {assignments.length === 0 ? (
+            <p className="text-muted">No tasks assigned yet.</p>
           ) : (
-            <p className="text-sm text-muted mt-1">No rating yet</p>
+            <div className="bg-white border border-border rounded-2xl divide-y divide-border overflow-x-hidden overflow-y-auto max-h-[340px]">
+              {assignments.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => onSelectTask(a.id)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent-soft/40 transition-colors text-left"
+                >
+                  <p className="text-sm text-foreground">{a.task.title}</p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isOverdue(a.status, a.task.endDate) && (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                        Overdue
+                      </span>
+                    )}
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-500"}`}>
+                      {STATUS_LABELS[a.status] ?? a.status}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">LinkedIn cadence</p>
-          <p className="text-3xl font-bold text-foreground">{linkedInWeeks.length}</p>
-          <p className="text-xs text-muted mt-2">
-            {linkedInWeeks.length === 0 ? "No posts logged" : `week${linkedInWeeks.length === 1 ? "" : "s"}: ${linkedInWeeks.join(", ")}`}
-          </p>
+        <div>
+          <h2 className="text-lg font-medium text-foreground mb-3">Rating trend</h2>
+          <div className="bg-white border border-border rounded-2xl p-4">
+            <RatingTrendChart data={ratingHistory} height={200} />
+          </div>
         </div>
-      </div>
-
-      <h2 className="text-lg font-medium text-foreground mb-3">Tasks</h2>
-      {assignments.length === 0 ? (
-        <p className="text-muted mb-8">No tasks assigned yet.</p>
-      ) : (
-        <div className="bg-white border border-border rounded-2xl divide-y divide-border overflow-hidden mb-8">
-          {assignments.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => onSelectTask(a.id)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent-soft/40 transition-colors text-left"
-            >
-              <p className="text-sm text-foreground">{a.task.title}</p>
-              <div className="flex items-center gap-2 shrink-0">
-                {isOverdue(a.status, a.task.endDate) && (
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
-                    Overdue
-                  </span>
-                )}
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-500"}`}>
-                  {STATUS_LABELS[a.status] ?? a.status}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="bg-white border border-border rounded-2xl p-5">
-        <h2 className="text-lg font-medium text-foreground mb-3">Rating trend</h2>
-        <RatingTrendChart data={ratingHistory} />
       </div>
     </div>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  hint,
+  swatch,
+  icon: Icon,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+  swatch: string;
+  icon: (props: { className?: string }) => React.JSX.Element;
+}) {
+  return (
+    <div className="bg-white border border-border rounded-2xl p-4 flex items-center gap-3" title={hint}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${swatch}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-muted uppercase tracking-wide leading-snug">{label}</p>
+        <div className="text-xl font-bold text-foreground leading-tight mt-0.5">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function IconChecklist({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="3" width="12" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7.5 3V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6.5 10l2 2 4-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconAlert({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <circle cx="10" cy="10" r="7.25" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 6.5v4M10 13.2h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconStar({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M10 2.5l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7L10 2.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconLink({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 12l4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M8.5 5.5H6a3.5 3.5 0 0 0 0 7h2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M11.5 12.5H14a3.5 3.5 0 0 0 0-7h-2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
   );
 }

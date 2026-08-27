@@ -144,9 +144,15 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
       )
       : 0;
 
-  const totalCompleted = rows.reduce((sum, r) => sum + r.taskCompletion.completed, 0);
+    const totalCompleted = rows.reduce((sum, r) => sum + r.taskCompletion.completed, 0);
   const totalTasks = rows.reduce((sum, r) => sum + r.taskCompletion.total, 0);
   const overallPercent = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0;
+
+  const totalOverdue = rows.reduce((sum, r) => sum + r.overdueCount, 0);
+  const ratedRows = rows.filter((r) => r.avgRating != null);
+  const avgRatingCohort =
+    ratedRows.length > 0 ? ratedRows.reduce((sum, r) => sum + (r.avgRating as number), 0) / ratedRows.length : null;
+  const totalLinkedInLogs = rows.reduce((sum, r) => sum + r.linkedInWeeksLogged, 0);
 
   return (
     <div>
@@ -187,37 +193,44 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Program dates</p>
-          {cohort && (
-            <>
-              <p className="text-lg font-bold text-foreground">
-                {formatDateRange(cohort.startDate, cohort.endDate)}
-              </p>
-              <p className="text-xs text-muted mt-2">{weeks} weeks total</p>
-            </>
-          )}
-        </div>
-
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Interns</p>
-          <p className="text-lg font-bold text-foreground">{rows.length}</p>
-          <p className="text-xs text-muted mt-2">in this cohort</p>
-        </div>
-
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Cohort progress</p>
-          <div className="flex items-center gap-3">
-            <p className="text-lg font-bold text-foreground">{overallPercent}%</p>
-            <div className="h-1.5 flex-1 rounded-full bg-border overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: `${overallPercent}%` }} />
-            </div>
-          </div>
-          <p className="text-xs text-muted mt-2">
-            {totalCompleted}/{totalTasks} tasks
-          </p>
-        </div>
+           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <StatTile
+          label="Program dates"
+          value={cohort ? formatDateRange(cohort.startDate, cohort.endDate) : "—"}
+          hint={`${weeks} weeks total`}
+          swatch="bg-accent-soft text-primary"
+          icon={IconCalendar}
+          valueClassName="text-sm font-bold"
+        />
+        <StatTile label="Interns" value={rows.length} hint="in this cohort" swatch="bg-blue-50 text-blue-600" icon={IconUsers} />
+        <StatTile
+          label="Cohort progress"
+          value={`${overallPercent}%`}
+          hint={`${totalCompleted}/${totalTasks} tasks`}
+          swatch="bg-accent-soft text-primary"
+          icon={IconChecklist}
+        />
+        <StatTile
+          label="Overdue tasks"
+          value={totalOverdue}
+          hint="Not submitted, past due"
+          swatch="bg-red-50 text-red-600"
+          icon={IconAlert}
+        />
+        <StatTile
+          label="Avg. rating"
+          value={avgRatingCohort != null ? avgRatingCohort.toFixed(1) : "—"}
+          hint={ratedRows.length > 0 ? `Based on ${ratedRows.length} rated intern${ratedRows.length === 1 ? "" : "s"}` : "No ratings yet"}
+          swatch="bg-amber-50 text-amber-700"
+          icon={IconStar}
+        />
+        <StatTile
+          label="LinkedIn logs"
+          value={totalLinkedInLogs}
+          hint="Weeks logged across interns"
+          swatch="bg-green-50 text-green-700"
+          icon={IconLink}
+        />
       </div>
 
       <div className="bg-white border border-border rounded-2xl overflow-hidden">
@@ -317,5 +330,95 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
         )}
       </div>
     </div>
+  );
+}
+function StatTile({
+  label,
+  value,
+  hint,
+  swatch,
+  icon: Icon,
+  valueClassName = "text-xl font-bold",
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  swatch: string;
+  icon: (props: { className?: string }) => React.JSX.Element;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="bg-white border border-border rounded-2xl p-4 flex items-center gap-3" title={hint}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${swatch}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-muted uppercase tracking-wide leading-snug">{label}</p>
+        <p className={`${valueClassName} text-foreground leading-tight mt-0.5`}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function IconCalendar({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="4" width="14" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 8h14" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6.5 2.5v3M13.5 2.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconUsers({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <circle cx="7" cy="6.5" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M2.5 16c0-2.8 2-4.5 4.5-4.5s4.5 1.7 4.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="14" cy="7" r="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12.8 11.7c2.1.2 3.7 1.8 3.7 4.3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconChecklist({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="3" width="12" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7.5 3V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6.5 10l2 2 4-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconAlert({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <circle cx="10" cy="10" r="7.25" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 6.5v4M10 13.2h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconStar({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M10 2.5l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7L10 2.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconLink({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 12l4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M8.5 5.5H6a3.5 3.5 0 0 0 0 7h2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M11.5 12.5H14a3.5 3.5 0 0 0 0-7h-2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
   );
 }

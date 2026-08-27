@@ -1,12 +1,11 @@
 type RatingPoint = { weekNumber: number; rating: number };
 
-export function RatingTrendChart({ data }: { data: RatingPoint[] }) {
+export function RatingTrendChart({ data, height = 260 }: { data: RatingPoint[]; height?: number }) {
   if (data.length === 0) {
     return <p className="text-muted text-sm">No feedback logged yet.</p>;
   }
 
   const width = 880;
-  const height = 260;
   const padLeft = 36;
   const padRight = 20;
   const padTop = 16;
@@ -27,8 +26,8 @@ export function RatingTrendChart({ data }: { data: RatingPoint[] }) {
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className="w-full"
-      style={{ height: 260 }}
+            className="w-full"
+      style={{ height }}
       role="img"
       aria-label="Rating trend by week"
     >

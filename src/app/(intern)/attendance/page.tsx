@@ -7,6 +7,9 @@ import {
   computeDailyWorkHours,
   groupAttendanceByDay,
   ATTENDANCE_VALID_FROM,
+  noteWordCount,
+  LATE_CHECKIN_MIN_WORDS,
+  LATE_CHECKIN_NOTE_MESSAGE,
 } from "@/lib/attendanceHours";
 import { pktDayKey } from "@/lib/timezone";
 import {
@@ -149,6 +152,9 @@ export default function AttendancePage() {
   const [pendingType, setPendingType] = useState<AttendanceType | null>(null);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [checkoutNote, setCheckoutNote] = useState("");
+  const [showCheckinForm, setShowCheckinForm] = useState(false);
+  const [checkinNote, setCheckinNote] = useState("");
+  const [checkinNoteError, setCheckinNoteError] = useState<string | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
@@ -182,12 +188,33 @@ export default function AttendancePage() {
       await logAttendance({ membershipId: membership.id, type, note });
       setShowCheckoutForm(false);
       setCheckoutNote("");
+      setShowCheckinForm(false);
+      setCheckinNote("");
+      setCheckinNoteError(null);
       await loadAll();
     } catch (e: any) {
-      setError(e.message ?? "Failed to log attendance");
+      const message = e.message ?? "Failed to log attendance";
+      // A plain check-in attempt (no note) gets rejected because it's past
+      // the late-checkin cutoff — reveal the note form instead of just
+      // showing this as a generic error, so the intern can retry with a
+      // reason in one extra step rather than guessing what went wrong.
+      if (type === "CHECK_IN" && message === LATE_CHECKIN_NOTE_MESSAGE) {
+        setShowCheckinForm(true);
+      } else {
+        setError(message);
+      }
     } finally {
       setPendingType(null);
     }
+  }
+
+  function submitCheckin() {
+    if (noteWordCount(checkinNote) < LATE_CHECKIN_MIN_WORDS) {
+      setCheckinNoteError(`Please describe your reason in at least ${LATE_CHECKIN_MIN_WORDS} words.`);
+      return;
+    }
+    setCheckinNoteError(null);
+    handleAction("CHECK_IN", checkinNote);
   }
 
   if (loading) return <div className="p-8 text-muted">Loading attendance…</div>;
@@ -277,6 +304,49 @@ export default function AttendancePage() {
                   </button>
                   <button
                     onClick={() => setShowCheckoutForm(false)}
+                    className="px-5 py-2.5 rounded-lg border border-border text-sm font-semibold hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showCheckinForm && (
+              <div className="mt-5 border-t border-border pt-5">
+                <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-3">
+                  {LATE_CHECKIN_NOTE_MESSAGE}
+                </p>
+                <label className="block text-sm text-muted mb-2">
+                  Reason (min. {LATE_CHECKIN_MIN_WORDS} words)
+                </label>
+                <textarea
+                  value={checkinNote}
+                  onChange={(e) => {
+                    setCheckinNote(e.target.value);
+                    if (checkinNoteError) setCheckinNoteError(null);
+                  }}
+                  rows={2}
+                  className="w-full rounded-lg border border-border p-3 text-sm"
+                  placeholder="e.g. Traffic was bad this morning, sorry for the delay"
+                />
+                {checkinNoteError && (
+                  <p className="mt-1.5 text-xs text-red-600">{checkinNoteError}</p>
+                )}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={submitCheckin}
+                    disabled={pendingType !== null}
+                    className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold disabled:opacity-50 transition"
+                  >
+                    {pendingType === "CHECK_IN" ? "Checking in…" : "Confirm Check In"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCheckinForm(false);
+                      setCheckinNote("");
+                      setCheckinNoteError(null);
+                    }}
                     className="px-5 py-2.5 rounded-lg border border-border text-sm font-semibold hover:bg-gray-50 transition"
                   >
                     Cancel

@@ -12,6 +12,16 @@ export function getPktHour(date: Date): number {
   return toPktDate(date).getUTCHours();
 }
 
+/** True if the PKT wall-clock time of `date` is at or after `hour:minute`
+ * (24h, e.g. isPktAtOrAfter(now, 10, 30) for 10:30 AM). Minute-precision
+ * counterpart to getPktHour, for cutoffs that don't land on the hour. */
+export function isPktAtOrAfter(date: Date, hour: number, minute: number): boolean {
+  const pkt = toPktDate(date);
+  const h = pkt.getUTCHours();
+  const m = pkt.getUTCMinutes();
+  return h > hour || (h === hour && m >= minute);
+}
+
 /** YYYY-MM-DD calendar-day key for a Date, as seen in Pakistan time — not
  * the viewer's browser timezone. Used to group attendance records so a
  * mentor viewing from outside Pakistan sees the same day boundaries an
