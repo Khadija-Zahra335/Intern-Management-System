@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getToken } from "@/lib/api";
+import { MarkdownText } from "@/components/MarkdownText";
 
 interface Source {
   intern: string;
@@ -184,7 +185,17 @@ export function AssistantPanel() {
                     }`
               }
             >
-              {m.content || (streaming && i === messages.length - 1 ? "…" : "")}
+                           {m.content ? (
+                m.role === "assistant" ? (
+                  <MarkdownText content={m.content} />
+                ) : (
+                  m.content
+                )
+              ) : streaming && i === messages.length - 1 ? (
+                "…"
+              ) : (
+                ""
+              )}
               {m.sources && m.sources.length > 0 && (
                 <p className="text-[11px] text-muted mt-2 pt-2 border-t border-border/60">
                   Sourced from: {m.sources.map((s) => `${s.intern} (Week ${s.week})`).join(", ")}
