@@ -63,42 +63,25 @@ export async function POST(
     );
   }
 
-  try {
-    // Create (or reactivate) the membership, then backfill TaskAssignment
-    // rows for every already-PUBLISHED task in this cohort — mirrors the
-    // exact pattern used in POST /api/tasks/[id]/publish. Without this, an
-    // intern added (or re-added) after tasks have been published would have
-    // an active Membership but zero assignments, so their task list would be
-    // empty even though the mentor can see the published tasks.
-    const membership = await prisma.$transaction(async (tx) => {
-      const membership = existing
-        ? await tx.membership.update({
-            where: { id: existing.id },
-            data: { isActive: true },
-            include: { user: { select: { id: true, name: true, email: true } } },
-          })
-        : await tx.membership.create({
-            data: { userId: intern.id, cohortId },
-            include: { user: { select: { id: true, name: true, email: true } } },
-          });
-
-      const publishedTasks = await tx.task.findMany({
-        where: { cohortId, state: "PUBLISHED" },
-        select: { id: true },
-      });
-
-      if (publishedTasks.length > 0) {
-        await tx.taskAssignment.createMany({
-          data: publishedTasks.map((t) => ({
-            taskId: t.id,
-            membershipId: membership.id,
-          })),
-          skipDuplicates: true,
+    try {
+    // Create (or reactivate) the membership only. Deliberately NOT
+    // backfilling TaskAssignment rows for already-PUBLISHED tasks anymore —
+    // an intern added (or re-added) now stays invisible to every existing
+    // task until a mentor explicitly assigns them to it (the "Assign an
+    // intern" picker on the task detail page, POST
+    // /api/tasks/[id]/assignments). Publishing a NEW task is unaffected by
+    // this change — that still auto-assigns every currently-active member
+    // (see POST /api/tasks/[id]/publish).
+    const membership = existing
+      ? await prisma.membership.update({
+          where: { id: existing.id },
+          data: { isActive: true },
+          include: { user: { select: { id: true, name: true, email: true } } },
+        })
+      : await prisma.membership.create({
+          data: { userId: intern.id, cohortId },
+          include: { user: { select: { id: true, name: true, email: true } } },
         });
-      }
-
-      return membership;
-    });
 
     return NextResponse.json(membership, { status: existing ? 200 : 201 });
   } catch (err: any) {

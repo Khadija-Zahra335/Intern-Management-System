@@ -299,17 +299,17 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 {task.state === "DRAFT" ? "Not published yet — no interns are assigned." : "No interns in this cohort."}
               </p>
             ) : (
-              assignments.map((a) => {
+                            assignments.map((a) => {
                 const palette = avatarPalette(a.membershipId);
                 return (
                   <div
                     key={a.assignmentId}
-                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors border ${selectedAssignmentId === a.assignmentId ? "bg-accent-soft border-accent" : "border-transparent hover:bg-accent-soft/50"
+                    className={`w-full rounded-lg transition-colors border ${selectedAssignmentId === a.assignmentId ? "bg-accent-soft border-accent" : "border-transparent hover:bg-accent-soft/50"
                       }`}
                   >
                     <button
                       onClick={() => setSelectedAssignmentId(a.assignmentId)}
-                      className="flex items-center gap-3 text-left flex-1 min-w-0"
+                      className="w-full flex items-center gap-3 text-left px-3 pt-2.5 pb-1.5"
                     >
                       <div className={`w-8 h-8 rounded-full ${palette.bg} ${palette.text} flex items-center justify-center text-xs font-bold shrink-0`}>
                         {a.intern.name.charAt(0).toUpperCase()}
@@ -321,14 +321,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                         </span>
                       </div>
                     </button>
-                    <button
-                      onClick={() => handleUnassign(a)}
-                      disabled={unassigningId === a.membershipId}
-                      title={`Unassign ${a.intern.name} from this task`}
-                      className="shrink-0 text-muted hover:text-red-600 disabled:opacity-50 text-sm leading-none px-1.5 py-1"
-                    >
-                      {unassigningId === a.membershipId ? "…" : "×"}
-                    </button>
+                    <div className="flex justify-end px-3 pb-2">
+                      <button
+                        onClick={() => handleUnassign(a)}
+                        disabled={unassigningId === a.membershipId}
+                        className="text-xs font-semibold text-red-600 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                      >
+                        {unassigningId === a.membershipId ? "Removing…" : "Remove"}
+                      </button>
+                    </div>
                   </div>
                 );
               })
