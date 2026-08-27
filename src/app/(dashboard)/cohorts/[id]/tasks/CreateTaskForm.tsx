@@ -101,9 +101,9 @@ export function CreateTaskForm({
   const busy = savingDraft || publishing;
 
   return (
-    <form onSubmit={handleSaveAsDraft} className="rounded-2xl border border-border bg-white p-5 space-y-4">
-      <div className="rounded-xl border border-dashed border-accent bg-accent-soft/40 p-4 space-y-2">
-        <label className="block text-sm font-medium text-foreground">Draft with AI (optional)</label>
+    <form onSubmit={handleSaveAsDraft} className="rounded-2xl border border-border bg-white p-4 space-y-3">
+      <div className="rounded-xl border border-dashed border-accent bg-accent-soft/40 p-3 space-y-1.5">
+        <label className="block text-xs font-medium text-foreground">Draft with AI (optional)</label>
         <p className="text-xs text-muted">
           Describe the topic in plain language and get a structured draft — Overview, Hands-on, Deliverable —
           that you can edit before saving.
@@ -114,23 +114,21 @@ export function CreateTaskForm({
           maxLength={MAX_TOPIC_LENGTH}
           rows={2}
           placeholder="e.g. Intro to REST API design — teach them how to structure endpoints and status codes"
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-white"
+          className="w-full rounded-lg border border-border px-3 py-1.5 text-xs bg-white"
         />
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={handleGenerate}
             disabled={generating}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             {generating ? "Generating…" : "Generate Draft"}
           </button>
           <span className="text-xs text-muted">{topic.length}/{MAX_TOPIC_LENGTH}</span>
         </div>
-        {genError && <p className="text-sm text-red-600">{genError}</p>}
-        {genError && <p className="text-sm text-red-600">{genError}</p>}
+        {genError && <p className="text-xs text-red-600">{genError}</p>}
       </div>
-
 
       {isAiDraft && (
         <p className="text-xs font-medium text-accent bg-accent-soft inline-block rounded-full px-2.5 py-1">
@@ -144,7 +142,7 @@ export function CreateTaskForm({
       )}
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Task title</label>
+        <label className="block text-xs font-medium text-foreground mb-1">Task title</label>
         <input
           value={title}
           onChange={(e) => {
@@ -152,13 +150,13 @@ export function CreateTaskForm({
             setIsAiDraft(false);
           }}
           required
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-border px-3 py-1.5 text-sm"
         />
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium text-foreground">Description</label>
+          <label className="block text-xs font-medium text-foreground">Description</label>
           <button
             type="button"
             onClick={() => setShowPreview((v) => !v)}
@@ -169,7 +167,7 @@ export function CreateTaskForm({
         </div>
 
         {showPreview ? (
-          <div className="w-full rounded-lg border border-border px-3 py-2 min-h-[100px] bg-gray-50">
+          <div className="w-full rounded-lg border border-border px-3 py-2 min-h-[80px] bg-gray-50 text-sm">
             {description ? <MarkdownText content={description} /> : <p className="text-sm text-muted">Nothing to preview yet.</p>}
           </div>
         ) : (
@@ -180,9 +178,9 @@ export function CreateTaskForm({
               setIsAiDraft(false);
             }}
             required
-            rows={8}
+            rows={6}
             placeholder={"## Overview\n...\n\n## Hands-on\n- ...\n\n## Deliverable\n..."}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm font-mono"
+            className="w-full rounded-lg border border-border px-3 py-2 text-xs font-mono"
           />
         )}
         <p className="text-xs text-muted mt-1">
@@ -190,13 +188,11 @@ export function CreateTaskForm({
         </p>
       </div>
 
-
-
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Start date</label>
+          <label className="block text-xs font-medium text-foreground mb-1">Start date</label>
           <input
             type="date"
             value={startDate}
@@ -204,11 +200,11 @@ export function CreateTaskForm({
             min={cohortStartDay}
             max={cohortEndDay}
             required
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-border px-3 py-1.5 text-sm"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">End date</label>
+          <label className="block text-xs font-medium text-foreground mb-1">End date</label>
           <input
             type="date"
             value={endDate}
@@ -216,7 +212,7 @@ export function CreateTaskForm({
             min={cohortStartDay}
             max={cohortEndDay}
             required
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-border px-3 py-1.5 text-sm"
           />
         </div>
         <p className="col-span-2 text-xs text-muted -mt-2">
