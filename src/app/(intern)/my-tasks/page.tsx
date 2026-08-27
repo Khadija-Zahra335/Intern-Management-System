@@ -114,14 +114,14 @@ function StatCard({
   icon: (props: { className?: string }) => React.JSX.Element;
 }) {
   return (
-    <div className="bg-white border border-border rounded-xl p-4">
-      <div className="flex items-start justify-between mb-2">
-        <p className="text-[11px] font-medium text-muted uppercase tracking-wide">{label}</p>
-        <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${swatch}`}>
-          <Icon className="w-3.5 h-3.5" />
-        </div>
+    <div className="bg-white border border-border rounded-2xl p-4 flex items-center gap-3">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${swatch}`}>
+        <Icon className="w-5 h-5" />
       </div>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-muted uppercase tracking-wide leading-snug">{label}</p>
+        <p className="text-xl font-bold text-foreground leading-tight mt-0.5">{value}</p>
+      </div>
     </div>
   );
 }

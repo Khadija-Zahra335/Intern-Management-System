@@ -15,6 +15,31 @@ function StarRow({ rating }: { rating: number }) {
   );
 }
 
+function StatTile({
+  label,
+  value,
+  swatch,
+  hint,
+  subNode,
+}: {
+  label: string;
+  value: React.ReactNode;
+  swatch: string;
+  hint?: string;
+  subNode?: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white border border-border rounded-2xl p-4 flex items-center gap-3" title={hint}>
+      <span className={`w-9 h-9 rounded-lg shrink-0 ${swatch}`} />
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-muted uppercase tracking-wide leading-snug">{label}</p>
+        <p className="text-xl font-bold text-foreground leading-tight mt-0.5">{value}</p>
+        {subNode}
+      </div>
+    </div>
+  );
+}
+
 export function FeedbackTab({
   membershipId,
   feedback,
@@ -89,104 +114,109 @@ export function FeedbackTab({
         <h2 className="text-lg font-medium text-foreground">Feedback &amp; Growth</h2>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2.5"
+          className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2"
         >
           {showForm ? "Cancel" : "Add Feedback"}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Average rating</p>
-          <p className="text-3xl font-bold text-foreground">{avgRating !== null ? avgRating.toFixed(1) : "—"}</p>
-          <p className="text-xs text-muted mt-2">{sorted.length === 0 ? "No ratings yet" : `Over ${sorted.length} week${sorted.length === 1 ? "" : "s"}`}</p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <StatTile
+          label="Average rating"
+          value={avgRating !== null ? avgRating.toFixed(1) : "—"}
+          swatch="bg-amber-500"
+          hint={sorted.length === 0 ? "No ratings yet" : `Over ${sorted.length} week${sorted.length === 1 ? "" : "s"}`}
+        />
 
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Latest week</p>
-          {latest ? (
-            <>
-              <p className="text-3xl font-bold text-foreground">{latest.rating.toFixed(1)}</p>
-              <p className={`text-xs mt-2 ${latestDelta === null ? "text-muted" : latestDelta >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {latestDelta === null ? `Week ${latest.weekNumber}` : `${latestDelta >= 0 ? "↑" : "↓"} ${Math.abs(latestDelta).toFixed(1)} from week ${previous!.weekNumber}`}
+        <StatTile
+          label="Latest week"
+          value={latest ? latest.rating.toFixed(1) : "—"}
+          swatch="bg-green-500"
+          subNode={
+            latest ? (
+              <p className={`text-[11px] mt-0.5 ${latestDelta === null ? "text-muted" : latestDelta >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {latestDelta === null
+                  ? `Week ${latest.weekNumber}`
+                  : `${latestDelta >= 0 ? "↑" : "↓"} ${Math.abs(latestDelta).toFixed(1)} from week ${previous!.weekNumber}`}
               </p>
-            </>
-          ) : (
-            <p className="text-sm text-muted mt-1">No rating yet</p>
-          )}
-        </div>
+            ) : (
+              <p className="text-[11px] text-muted mt-0.5">No rating yet</p>
+            )
+          }
+        />
 
-        <div className="bg-white border border-border rounded-2xl p-5">
-          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Tasks completed</p>
-          <p className="text-3xl font-bold text-foreground">{tasksCompleted}</p>
-          <p className="text-xs text-muted mt-2">of {assignments.length} assigned</p>
-        </div>
+        <StatTile
+          label="Tasks completed"
+          value={tasksCompleted}
+          swatch="bg-accent"
+          hint={`of ${assignments.length} assigned`}
+        />
       </div>
 
       {error && <p className="text-red-600 mb-4 text-sm">{error}</p>}
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="border border-border rounded-2xl p-5 bg-white mb-8 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Week number</label>
-            <input
-              type="number"
-              min={1}
-              value={weekNumber}
-              onChange={(e) => {
-                setWeekNumber(e.target.value);
-                setInsight(null);
-                setInsightError("");
-              }}
-              className="border border-border rounded-lg px-3 py-2 w-32 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="border border-border rounded-2xl p-4 bg-white mb-6 space-y-3">
+          <div className="flex items-end gap-3 flex-wrap">
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1">Week number</label>
+              <input
+                type="number"
+                min={1}
+                value={weekNumber}
+                onChange={(e) => {
+                  setWeekNumber(e.target.value);
+                  setInsight(null);
+                  setInsightError("");
+                }}
+                className="border border-border rounded-lg px-3 py-1.5 w-28 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+              />
+            </div>
 
-          <div>
             <button
               type="button"
               onClick={handleGetInsight}
               disabled={!weekNumber || insightLoading}
-              className="text-sm font-medium text-primary border border-primary rounded-lg px-3 py-1.5 hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-primary"
+              className="text-xs font-medium text-primary border border-primary rounded-lg px-3 py-1.5 hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-primary"
             >
-              {insightLoading ? "Generating..." : "Get AI insight for this week"}
+              {insightLoading ? "Generating…" : "Get AI insight for this week"}
             </button>
-
-            {insightError && <p className="text-red-600 text-xs mt-2">{insightError}</p>}
-
-            {insight && (
-              <div className="mt-3 bg-accent-soft border border-border rounded-xl p-4">
-                <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-1.5">
-                  AI weekly insight — read-only, write your own feedback below
-                </p>
-                <p className="text-sm text-foreground leading-relaxed">{insight.summary}</p>
-                {insight.hasActivity && (
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-muted">
-                    <span>
-                      {insight.stats.tasksCompleted}/{insight.stats.tasksAssigned} tasks completed
-                    </span>
-                    {insight.stats.tasksBlocked > 0 && (
-                      <span className="text-red-600">{insight.stats.tasksBlocked} blocked</span>
-                    )}
-                    {insight.stats.checkinNotes > 0 && (
-                      <span>
-                        {insight.stats.checkinNotes} check-in note{insight.stats.checkinNotes === 1 ? "" : "s"}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
+          {insightError && <p className="text-red-600 text-xs">{insightError}</p>}
+
+          {insight && (
+            <div className="bg-accent-soft border border-border rounded-xl p-3">
+              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-1.5">
+                AI weekly insight — read-only, write your own feedback below
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">{insight.summary}</p>
+              {insight.hasActivity && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-xs text-muted">
+                  <span>
+                    {insight.stats.tasksCompleted}/{insight.stats.tasksAssigned} tasks completed
+                  </span>
+                  {insight.stats.tasksBlocked > 0 && (
+                    <span className="text-red-600">{insight.stats.tasksBlocked} blocked</span>
+                  )}
+                  {insight.stats.checkinNotes > 0 && (
+                    <span>
+                      {insight.stats.checkinNotes} check-in note{insight.stats.checkinNotes === 1 ? "" : "s"}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Rating</label>
+            <label className="block text-xs font-medium text-foreground mb-1">Rating</label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} type="button" onClick={() => setRating(n)} className="p-0.5" aria-label={`${n} stars`}>
                   <svg
                     viewBox="0 0 20 20"
-                    className={`w-7 h-7 transition-colors ${
+                    className={`w-6 h-6 transition-colors ${
                       rating !== null && n <= rating ? "fill-primary" : "fill-border hover:fill-accent"
                     }`}
                   >
@@ -198,12 +228,12 @@ export function FeedbackTab({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Comment</label>
+            <label className="block text-xs font-medium text-foreground mb-1">Comment</label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
-              className="border border-border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+              className="border border-border rounded-lg px-3 py-1.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
             />
           </div>
 
@@ -217,16 +247,16 @@ export function FeedbackTab({
         </form>
       )}
 
-      <h2 className="text-lg font-medium text-foreground mb-3">Feedback history</h2>
+      <h2 className="text-sm font-bold text-foreground mb-2.5">Feedback history</h2>
 
       {sorted.length === 0 ? (
         <p className="text-muted">No feedback given yet.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {sorted.slice().reverse().map((f) => (
-            <div key={f.id} className="border border-border rounded-2xl p-4 bg-white">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-foreground">Week {f.weekNumber}</span>
+            <div key={f.id} className="border border-border rounded-2xl p-3.5 bg-white">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-sm font-medium text-foreground">Week {f.weekNumber}</span>
                 <StarRow rating={f.rating} />
               </div>
               <p className="text-sm text-foreground whitespace-pre-wrap">{f.comment}</p>

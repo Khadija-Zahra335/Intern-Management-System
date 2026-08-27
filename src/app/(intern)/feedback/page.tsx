@@ -19,11 +19,12 @@ function StarRow({ rating }: { rating: number }) {
 
 function StatCard({ label, value, sub, dot }: { label: string; value: string; sub: string; dot: string }) {
   return (
-    <div className="bg-white border border-border rounded-2xl p-5 relative">
-      <span className={`absolute top-5 right-5 w-6 h-6 rounded-md ${dot}`} />
-      <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2 pr-8">{label}</p>
-      <p className="text-3xl font-bold text-foreground">{value}</p>
-      <p className="text-xs text-muted mt-2">{sub}</p>
+    <div className="bg-white border border-border rounded-2xl p-4 flex items-center gap-3" title={sub}>
+      <span className={`w-9 h-9 rounded-lg shrink-0 ${dot}`} />
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-muted uppercase tracking-wide leading-snug">{label}</p>
+        <p className="text-xl font-bold text-foreground leading-tight mt-0.5">{value}</p>
+      </div>
     </div>
   );
 }
@@ -65,7 +66,7 @@ export default function FeedbackPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-foreground mb-6">Feedback &amp; Ratings</h1>
+      <h1 className="text-xl font-bold text-foreground mb-4">Feedback &amp; Ratings</h1>
 
       {sorted.length === 0 ? (
         <div className="bg-white border border-border rounded-2xl p-8 text-center">
@@ -75,8 +76,8 @@ export default function FeedbackPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard
               label="Overall average"
               value={average!.toFixed(1)}
@@ -87,44 +88,46 @@ export default function FeedbackPage() {
             <StatCard label="Weeks with feedback" value={String(sorted.length)} sub="Total recorded" dot="bg-accent" />
           </div>
 
-          <div className="bg-white border border-border rounded-2xl overflow-hidden">
-            <div className="px-6 pt-6 pb-4">
-              <h2 className="font-semibold text-foreground">Rating trend</h2>
-              <p className="text-sm text-muted mt-0.5">Weekly mentor ratings over time</p>
-            </div>
-            <div className="border-t border-border px-6 py-6">
-              <RatingTrendChart data={sorted.map((f) => ({ weekNumber: f.weekNumber, rating: f.rating }))} />
-            </div>
-          </div>
-
-          <div className="bg-white border border-border rounded-2xl overflow-hidden">
-            <div className="px-6 pt-6 pb-4">
-              <h2 className="font-semibold text-foreground">Feedback history</h2>
-              <p className="text-sm text-muted mt-0.5">Most recent first</p>
-            </div>
-            <div className="border-t border-border divide-y divide-border">
-              {mostRecentFirst.map((f) => (
-                <div key={f.id} className="px-6 py-5">
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="font-semibold text-foreground">Week {f.weekNumber}</span>
-                      <div className="flex items-center gap-1.5">
-                        <StarRow rating={f.rating} />
-                        <span className="text-sm text-muted">{f.rating}/5</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-white border border-border rounded-2xl overflow-hidden flex flex-col">
+              <div className="px-5 pt-4 pb-3 shrink-0">
+                <h2 className="text-sm font-bold text-foreground">Feedback history</h2>
+                <p className="text-xs text-muted mt-0.5">Most recent first</p>
+              </div>
+              <div className="border-t border-border divide-y divide-border flex-1 overflow-y-auto">
+                {mostRecentFirst.map((f) => (
+                  <div key={f.id} className="px-5 py-3.5">
+                    <div className="flex items-start justify-between gap-4 mb-1.5">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="text-sm font-semibold text-foreground">Week {f.weekNumber}</span>
+                        <div className="flex items-center gap-1.5">
+                          <StarRow rating={f.rating} />
+                          <span className="text-xs text-muted">{f.rating}/5</span>
+                        </div>
                       </div>
+                      <span className="text-xs text-muted shrink-0 whitespace-nowrap">{formatDate(f.createdAt)}</span>
                     </div>
-                    <span className="text-xs text-muted shrink-0 whitespace-nowrap">{formatDate(f.createdAt)}</span>
+                    {f.comment && <p className="text-sm text-foreground leading-relaxed">{f.comment}</p>}
+                    {f.updatedAt !== f.createdAt && (
+                      <p className="text-xs text-muted mt-1.5">Updated {formatDate(f.updatedAt)}</p>
+                    )}
                   </div>
-                  {f.comment && <p className="text-sm text-foreground leading-relaxed">{f.comment}</p>}
-                  {f.updatedAt !== f.createdAt && (
-                    <p className="text-xs text-muted mt-2">Updated {formatDate(f.updatedAt)}</p>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white border border-border rounded-2xl overflow-hidden flex flex-col">
+              <div className="px-5 pt-4 pb-3 shrink-0">
+                <h2 className="text-sm font-bold text-foreground">Rating trend</h2>
+                <p className="text-xs text-muted mt-0.5">Weekly mentor ratings over time</p>
+              </div>
+              <div className="border-t border-border px-5 py-4 flex-1 flex items-center">
+                <RatingTrendChart data={sorted.map((f) => ({ weekNumber: f.weekNumber, rating: f.rating }))} height={220} />
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-}
+}``
