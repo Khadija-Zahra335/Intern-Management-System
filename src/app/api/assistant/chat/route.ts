@@ -32,13 +32,30 @@ Guidelines:
 
 const NO_MATCH_PROMPT = `You are an assistant for a mentor dashboard that only answers questions using real intern records from the program's database.
 
-No relevant records were found for this question.
+No records at all were found for this question — the database has nothing related to it.
 
 Guidelines:
 - Say clearly and briefly that you don't have any records matching this question.
 - Suggest asking about a specific intern, week, or cohort if that would help.
 - Do NOT answer from general knowledge, and do NOT guess or invent any name, rating, or detail.
 - Keep it under 60 words.`;
+
+// Used when retrieval found records, but none of them confidently answer
+// the specific question asked (e.g. the mentor asked about a week or
+// intern the data just doesn't cover yet). Rather than the same generic
+// "no records" reply every time, this tells the model what IS actually on
+// file so the mentor learns something useful either way — "no Week 3
+// feedback for Ahmed, but Week 2 is on file" beats a blanket refusal.
+const PARTIAL_MATCH_PROMPT = `You are an assistant helping a mentor review her interns' progress in a software engineering internship program, using real records pulled from the program's own database.
+
+None of the records below confidently answer this specific question, but they are the closest related records that actually exist in the database.
+
+Guidelines:
+- Do not treat the records below as if they answer the question — they may be about the wrong week, intern, or topic.
+- Start by saying plainly that you don't have records that directly answer this specific question.
+- Then, in one short sentence, say what the records below actually cover (which intern and week) so the mentor knows what's on file instead.
+- Do NOT answer from general knowledge, and do NOT invent or guess any name, rating, or detail not present in the records below.
+- Keep it under 100 words.`;
 
 function validateMessages(messages: unknown): string | null {
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -111,10 +128,11 @@ export async function POST(req: NextRequest) {
         (chunks.length ? ` (top ${chunks[0].score.toFixed(3)})` : "")
     );
 
-    const systemPrompt = grounded
+       const systemPrompt = grounded
       ? `${GROUNDED_PROMPT}\n\nRECORDS:\n\n${formatContext(chunks)}`
-      : NO_MATCH_PROMPT;
-
+      : chunks.length > 0
+        ? `${PARTIAL_MATCH_PROMPT}\n\nRECORDS:\n\n${formatContext(chunks)}`
+        : NO_MATCH_PROMPT;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 

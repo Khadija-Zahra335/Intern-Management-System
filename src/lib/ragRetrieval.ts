@@ -13,8 +13,16 @@ const NAMESPACE = process.env.PINECONE_NAMESPACE || "capstone-analytics";
 
 const CANDIDATES = 20; // how many nearest neighbors to pull from Pinecone
 const TOP_K = 4; // how many to keep after reranking
-const MIN_SCORE = 0.2; // rerank relevance cutoff — below this, discard
+const MIN_SCORE = 0.2; // rerank relevance cutoff for a confident "grounded" answer
 const MIN_QUERY_LENGTH = 8; // shorter than this carries almost no meaning
+
+// When nothing clears MIN_SCORE, we still surface this many of the closest
+// candidates instead of returning empty-handed — real data, just not a
+// confident match for the question asked. Lets the model tell the mentor
+// what IS on file ("no Week 3 feedback, but here's Week 2") instead of the
+// same generic "no records" reply for every question with thin data behind
+// it. See PARTIAL_MATCH_PROMPT in the chat route.
+const PARTIAL_MATCH_COUNT = 2;
 
 // ---------------------------------------------------------------
 // Clients — built lazily, on first use, and cached. This keeps env vars
@@ -198,14 +206,21 @@ export async function retrieveContext(
       topN: TOP_K,
     });
 
-    const chunks: RetrievedChunk[] = reranked.results
-      .filter((r) => r.relevanceScore >= MIN_SCORE)
-      .map((r) => ({
-        score: r.relevanceScore,
-        ...(matches[r.index].metadata as unknown as ChunkMetadata),
-      }));
+        const strong = reranked.results.filter((r) => r.relevanceScore >= MIN_SCORE);
 
-    return { chunks, grounded: chunks.length > 0, searchQuery };
+    // Nothing confidently answers the question — rather than discarding
+    // everything, keep the closest candidate(s) anyway. Still real records,
+    // just not necessarily the ones the mentor asked about; `grounded` stays
+    // false so the chat route knows to caveat them instead of answering
+    // as if they matched.
+    const picked = strong.length > 0 ? strong : reranked.results.slice(0, PARTIAL_MATCH_COUNT);
+
+    const chunks: RetrievedChunk[] = picked.map((r) => ({
+      score: r.relevanceScore,
+      ...(matches[r.index].metadata as unknown as ChunkMetadata),
+    }));
+
+    return { chunks, grounded: strong.length > 0, searchQuery };
   } catch (error) {
     // Retrieval failing should degrade the answer, not break the chat.
     console.error("Retrieval failed:", error);
