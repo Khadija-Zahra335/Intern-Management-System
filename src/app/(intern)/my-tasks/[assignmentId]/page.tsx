@@ -59,6 +59,14 @@ function SendIcon({ className }: { className?: string }) {
   );
 }
 
+// Same rule as the /my-tasks list — a calendar day, not a timestamp.
+function isOverdue(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false;
+  const due = new Date(dateStr);
+  due.setHours(23, 59, 59, 999);
+  return due.getTime() < Date.now();
+}
+
 export default function TaskDetailPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
 
@@ -168,6 +176,7 @@ export default function TaskDetailPage() {
   }
 
   const canAct = assignment.status === "NOT_STARTED" || assignment.status === "IN_PROGRESS" || assignment.status === "BLOCKED";
+  const overdue = canAct && isOverdue(assignment.task.endDate);
 
   const sortedSubmissions = [...submissions].sort(
     (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
@@ -198,10 +207,17 @@ export default function TaskDetailPage() {
           <div className="bg-white border border-border rounded-2xl p-5">
             <div className="flex items-start justify-between gap-3 mb-4">
               {(assignment.task.startDate || assignment.task.endDate) ? (
-                <div className="flex items-center gap-1.5 text-xs text-muted">
-                  <CalendarIcon className="w-3.5 h-3.5" />
-                  {assignment.task.startDate ? formatDate(assignment.task.startDate) : "—"} –{" "}
-                  {assignment.task.endDate ? formatDate(assignment.task.endDate) : "—"}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                    {assignment.task.startDate ? formatDate(assignment.task.startDate) : "—"} –{" "}
+                    {assignment.task.endDate ? formatDate(assignment.task.endDate) : "—"}
+                  </div>
+                  {overdue && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                      Overdue
+                    </span>
+                  )}
                 </div>
               ) : <span />}
 

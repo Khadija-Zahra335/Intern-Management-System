@@ -7,20 +7,7 @@ import { computeWeekNumber, startOfThisWeekPKT } from "@/lib/weeks";
 // Rolls up the numbers the new mentor Dashboard page needs: aggregate stat
 // tiles + a per-cohort progress table. Read-only, doesn't touch any
 // existing route's data or behavior.
-//
-// Known approximations (flagged, not silently assumed):
-// - "tasksPublishedThisWeek" uses Task.createdAt as a stand-in for a real
-//   publishedAt timestamp, since Task has no such field today. A task
-//   created this week and already published counts; a task created
-//   earlier but published this week does not.
-// - "avgRating" is the average of each active membership's most recent
-//   Feedback rating (same "latest rating" semantics as the per-intern
-//   dashboard's Overview tab), not an average of every rating ever given.
-// - "linkedInCompletionPercent" per cohort is the average, across that
-//   cohort's active members, of (distinct weeks logged / weeks elapsed so
-//   far), capped at 100%. There's no stored "expected weeks" value, so
-//   this is computed from computeWeekNumber() the same way the intern
-//   pages already do.
+
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return unauthorized();
@@ -42,7 +29,7 @@ export async function GET(req: NextRequest) {
         memberships: {
           where: { isActive: true },
           include: {
-            assignments: { select: { status: true } },
+            assignments: { select: { status: true, task: { select: { endDate: true } } } },
             linkedInPosts: { select: { weekNumber: true } },
             feedback: {
               select: { rating: true, weekNumber: true },
@@ -58,6 +45,7 @@ export async function GET(req: NextRequest) {
   let activeInterns = 0;
   let ratingSum = 0;
   let ratingCount = 0;
+  let overdueTasks = 0;
 
   const cohortProgress = cohorts.map((cohort) => {
     activeInterns += cohort.memberships.length;
@@ -81,6 +69,17 @@ export async function GET(req: NextRequest) {
         ratingSum += latestRating;
         ratingCount += 1;
       }
+
+      // Overdue: not yet submitted/completed, and the task's own due date
+      // has fully passed (end of that calendar day) — same rule as the
+      // per-cohort progress endpoint and the intern-facing pages.
+      for (const a of m.assignments) {
+        if (a.status === "COMPLETED" || a.status === "SUBMITTED") continue;
+        if (!a.task.endDate) continue;
+        const endOfDueDay = new Date(a.task.endDate);
+        endOfDueDay.setHours(23, 59, 59, 999);
+        if (endOfDueDay < now) overdueTasks += 1;
+      }
     }
 
     return {
@@ -102,6 +101,7 @@ export async function GET(req: NextRequest) {
     tasksPublishedThisWeek,
     avgRating: ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : null,
     linkedInPostsThisWeek,
+    overdueTasks,
     cohorts: cohortProgress,
   });
 }

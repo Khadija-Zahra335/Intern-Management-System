@@ -69,7 +69,7 @@ export default function DashboardPage() {
                     />
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                     <StatTile label="Active interns" value={summary.activeInterns} swatch="bg-accent-soft text-primary" icon={IconUsers} />
                     <StatTile
                         label="Tasks published"
@@ -77,6 +77,13 @@ export default function DashboardPage() {
                         hint="This week across cohorts"
                         swatch="bg-blue-50 text-blue-600"
                         icon={IconChecklist}
+                    />
+                    <StatTile
+                        label="Overdue tasks"
+                        value={summary.overdueTasks}
+                        hint="Not submitted, past due"
+                        swatch="bg-red-50 text-red-600"
+                        icon={IconAlert}
                     />
                     <StatTile
                         label="Avg. rating"
@@ -270,6 +277,15 @@ function IconStar({ className }: { className?: string }) {
                 strokeWidth="1.4"
                 strokeLinejoin="round"
             />
+        </svg>
+    );
+}
+
+function IconAlert({ className }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="7.25" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M10 6.5v4M10 13.2h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
     );
 }

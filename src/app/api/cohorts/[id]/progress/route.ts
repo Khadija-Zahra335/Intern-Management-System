@@ -16,7 +16,7 @@ export async function GET(
     where: { cohortId },
     include: {
       user: { select: { id: true, name: true, email: true } },
-      assignments: { select: { status: true } },
+      assignments: { select: { status: true, task: { select: { endDate: true } } } },
       linkedInPosts: { select: { weekNumber: true } },
       feedback: {
         select: { weekNumber: true, rating: true },
@@ -25,9 +25,20 @@ export async function GET(
     },
   });
 
+  const now = new Date();
+
   const progress = memberships.map((m) => {
     const totalTasks = m.assignments.length;
     const completedTasks = m.assignments.filter((a) => a.status === "COMPLETED").length;
+    // Overdue: not yet submitted/completed, and the task's own due date has
+    // fully passed (end of that calendar day, not the instant it starts).
+    const overdueCount = m.assignments.filter((a) => {
+      if (a.status === "COMPLETED" || a.status === "SUBMITTED") return false;
+      if (!a.task.endDate) return false;
+      const endOfDueDay = new Date(a.task.endDate);
+      endOfDueDay.setHours(23, 59, 59, 999);
+      return endOfDueDay < now;
+    }).length;
     const linkedInWeeksLogged = new Set(m.linkedInPosts.map((p) => p.weekNumber)).size;
     const latestFeedback = m.feedback[0] ?? null;
 
@@ -40,6 +51,7 @@ export async function GET(
         completed: completedTasks,
         percent: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
       },
+      overdueCount,
       linkedInWeeksLogged,
       latestRating: latestFeedback
         ? { weekNumber: latestFeedback.weekNumber, rating: latestFeedback.rating }

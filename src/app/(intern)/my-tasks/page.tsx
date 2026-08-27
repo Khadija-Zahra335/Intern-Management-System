@@ -39,6 +39,16 @@ function isDueTomorrow(dateStr: string | null | undefined): boolean {
   return due.toDateString() === tomorrow.toDateString();
 }
 
+// A task's endDate is a calendar day, not a timestamp — it's only actually
+// overdue once that whole day has passed, not the instant the clock ticks
+// past midnight on the due date itself.
+function isOverdue(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false;
+  const due = new Date(dateStr);
+  due.setHours(23, 59, 59, 999);
+  return due.getTime() < Date.now();
+}
+
 function SearchIcon() {
   return (
     <svg viewBox="0 0 20 20" className="w-4 h-4 fill-none stroke-muted" strokeWidth={1.6}>
@@ -117,8 +127,9 @@ function StatCard({
 }
 
 function TaskCard({ a }: { a: Assignment }) {
-  const dueTomorrow =
-    a.status !== "COMPLETED" && a.status !== "SUBMITTED" && isDueTomorrow(a.task.endDate);
+  const isActionable = a.status !== "COMPLETED" && a.status !== "SUBMITTED";
+  const overdue = isActionable && isOverdue(a.task.endDate);
+  const dueTomorrow = isActionable && !overdue && isDueTomorrow(a.task.endDate);
 
   return (
     <Link
@@ -140,11 +151,15 @@ function TaskCard({ a }: { a: Assignment }) {
         ) : (
           <span />
         )}
-        {dueTomorrow && (
+        {overdue ? (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
+            Overdue
+          </span>
+        ) : dueTomorrow ? (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 shrink-0">
             Due tomorrow
           </span>
-        )}
+        ) : null}
       </div>
     </Link>
   );

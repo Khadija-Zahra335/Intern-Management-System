@@ -374,6 +374,7 @@ export type MemberProgress = {
   user: { id: string; name: string; email: string };
   isActive: boolean;
   taskCompletion: { total: number; completed: number; percent: number };
+  overdueCount: number;
   linkedInWeeksLogged: number;
   latestRating: { weekNumber: number; rating: number } | null;
   ratingHistory: { weekNumber: number; rating: number }[];
@@ -401,7 +402,17 @@ export type DashboardSummary = {
   tasksPublishedThisWeek: number;
   avgRating: number | null;
   linkedInPostsThisWeek: number;
-  cohorts: DashboardCohortProgress[];
+  overdueTasks: number;
+  cohorts: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    internsCount: number;
+    taskCompletionPercent: number;
+    linkedInCompletionPercent: number;
+    status: "Active" | "Archived";
+  }[];
 };
 
 export function getDashboardSummary() {
@@ -534,3 +545,6 @@ export type WeeklyInsight = {
 export function getWeeklyInsight(membershipId: string, weekNumber: number) {
   return request<WeeklyInsight>(`/insights/weekly?membershipId=${membershipId}&weekNumber=${weekNumber}`);
 }
+
+
+

@@ -16,6 +16,17 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: "Completed",
 };
 
+// Not yet submitted/completed, and the task's own due date has fully
+// passed (end of that calendar day) — same rule used everywhere else this
+// is checked (intern pages, cohort progress table, dashboard stat tile).
+function isOverdue(status: string, endDate: string | null): boolean {
+  if (status === "COMPLETED" || status === "SUBMITTED") return false;
+  if (!endDate) return false;
+  const endOfDueDay = new Date(endDate);
+  endOfDueDay.setHours(23, 59, 59, 999);
+  return endOfDueDay < new Date();
+}
+
 function StarRow({ rating, size = "w-5 h-5" }: { rating: number; size?: string }) {
   return (
     <div className="flex gap-0.5">
@@ -91,9 +102,16 @@ export function OverviewTab({
               className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent-soft/40 transition-colors text-left"
             >
               <p className="text-sm text-foreground">{a.task.title}</p>
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-500"}`}>
-                {STATUS_LABELS[a.status] ?? a.status}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                {isOverdue(a.status, a.task.endDate) && (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                    Overdue
+                  </span>
+                )}
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-500"}`}>
+                  {STATUS_LABELS[a.status] ?? a.status}
+                </span>
+              </div>
             </button>
           ))}
         </div>

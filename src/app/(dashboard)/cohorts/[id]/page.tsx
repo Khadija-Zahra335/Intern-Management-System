@@ -236,6 +236,7 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
                   <th className="px-5 py-3">Email</th>
                   <th className="px-5 py-3">Joined</th>
                   <th className="px-5 py-3">Progress</th>
+                  <th className="px-5 py-3">Overdue</th>
                   <th className="px-5 py-3">Rating</th>
                   <th className="px-5 py-3" />
                 </tr>
@@ -265,6 +266,15 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
                         </div>
                         <span className="text-xs text-muted w-9 text-right">{r.taskCompletion.percent}%</span>
                       </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      {r.overdueCount > 0 ? (
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                          {r.overdueCount}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       {r.avgRating != null ? (
