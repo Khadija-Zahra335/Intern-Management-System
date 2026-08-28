@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Assignment, Feedback, giveFeedback, getWeeklyInsight, WeeklyInsight } from "@/lib/api";
+import { FormLabel } from "@/components/FormLabel";
 
 function StarRow({ rating }: { rating: number }) {
   return (
@@ -159,7 +160,8 @@ export function FeedbackTab({
         <form onSubmit={handleSubmit} className="border border-border rounded-2xl p-4 bg-white mb-6 space-y-3">
           <div className="flex items-end gap-3 flex-wrap">
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1">Week number</label>
+              <FormLabel required className="block text-xs font-medium text-foreground mb-1">Week number</FormLabel>
+
               <input
                 type="number"
                 min={1}
@@ -210,15 +212,14 @@ export function FeedbackTab({
           )}
 
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1">Rating</label>
+            <FormLabel required className="block text-xs font-medium text-foreground mb-1">Rating</FormLabel>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} type="button" onClick={() => setRating(n)} className="p-0.5" aria-label={`${n} stars`}>
                   <svg
                     viewBox="0 0 20 20"
-                    className={`w-6 h-6 transition-colors ${
-                      rating !== null && n <= rating ? "fill-primary" : "fill-border hover:fill-accent"
-                    }`}
+                    className={`w-6 h-6 transition-colors ${rating !== null && n <= rating ? "fill-primary" : "fill-border hover:fill-accent"
+                      }`}
                   >
                     <path d="M10 1.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6.1L10 14.9l-5.4 3 1.3-6.1L1.3 7.7l6.1-.6L10 1.5z" />
                   </svg>
@@ -228,8 +229,7 @@ export function FeedbackTab({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1">Comment</label>
-            <textarea
+            <FormLabel required className="block text-xs font-medium text-foreground mb-1">Comment</FormLabel>            <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}

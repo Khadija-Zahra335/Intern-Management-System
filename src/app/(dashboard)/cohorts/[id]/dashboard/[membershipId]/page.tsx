@@ -20,6 +20,7 @@ import {
   getAttendance,
 } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { useLoadState } from "@/hooks/useLoadState";
 import { OverviewTab } from "./OverviewTab";
 import { SubmissionsTab } from "./SubmissionTab";
 import { FeedbackTab } from "./FeedbackTab";
@@ -69,11 +70,11 @@ function avatarPalette(seed: string) {
   const [linkedInPosts, setLinkedInPosts] = useState<LinkedInPost[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const { loading, refreshing, startLoad, endLoad } = useLoadState();
   const [error, setError] = useState("");
 
-  async function loadAll() {
-    setLoading(true);
+  async function loadAll(initial = false) {
+    startLoad(initial);
     try {
       const [cohorts, members, memberAssignments, memberFeedback, posts, attendanceRecords] = await Promise.all([
         getCohorts(),
@@ -105,12 +106,12 @@ function avatarPalette(seed: string) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load progress");
     } finally {
-      setLoading(false);
+      endLoad(initial);
     }
   }
 
   useEffect(() => {
-    loadAll();
+    loadAll(true);
   }, [id, membershipId]);
 
   if (loading) return <p className="text-sm text-muted">Loading…</p>;
@@ -141,6 +142,10 @@ function avatarPalette(seed: string) {
 
       {error && (
         <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+      )}
+
+      {refreshing && (
+        <p className="mb-4 text-xs text-muted">Syncing…</p>
       )}
 
       <div className="bg-white border border-border rounded-2xl p-6 mb-6">
@@ -175,12 +180,6 @@ function avatarPalette(seed: string) {
               <p className="text-lg font-bold text-foreground">{pending.length}</p>
               <p className="text-xs text-muted">Pending</p>
             </div>
-            <button
-              onClick={() => setTab("feedback")}
-              className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2.5"
-            >
-              Give Feedback
-            </button>
           </div>
         </div>
       </div>

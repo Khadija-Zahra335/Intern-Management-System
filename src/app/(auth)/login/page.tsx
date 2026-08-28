@@ -6,6 +6,8 @@ import Link from "next/link";
 import { login, saveToken, requestMagicLink } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { AuthCard } from "@/components/AuthCard";
+import { PasswordInput } from "@/components/PasswordInput";
+import { FormLabel } from "@/components/FormLabel";
 
 type Mode = "password" | "magic-link";
 
@@ -64,16 +66,15 @@ export default function LoginPage() {
 
       {mode === "password" && (
         <form onSubmit={handlePasswordSubmit}>
-          <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+          <FormLabel required>Email</FormLabel>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@musketeertech.com"
             className="w-full mb-4 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
 
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-sm font-medium text-foreground">Password</label>
+            <FormLabel required className="block text-sm font-medium text-foreground">Password</FormLabel>
             <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">Forgot password?</Link>
           </div>
-          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-            className="w-full mb-6 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
+          <PasswordInput required value={password} onChange={(e) => setPassword(e.target.value)} wrapperClassName="mb-6" />
 
           <button type="submit" disabled={loading}
             className="w-full rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold py-2.5 transition-colors disabled:opacity-60">

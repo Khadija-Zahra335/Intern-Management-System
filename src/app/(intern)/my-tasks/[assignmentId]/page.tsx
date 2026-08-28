@@ -7,6 +7,7 @@ import { MarkdownText } from "@/components/MarkdownText";
 import { ActivityThread } from "@/components/ActivityThread";
 import { formatDate } from "@/lib/format";
 import { uploadAttachment } from "@/lib/api";
+import { useLoadState } from "@/hooks/useLoadState";
 import {
   Assignment,
   Submission,
@@ -73,7 +74,7 @@ export default function TaskDetailPage() {
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const { loading, refreshing, startLoad, endLoad } = useLoadState();
   const [error, setError] = useState("");
 
   const [statusBusy, setStatusBusy] = useState(false);
@@ -82,15 +83,14 @@ export default function TaskDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
-  async function loadAll() {
-    setLoading(true);
+  async function loadAll(initial = false) {
+    startLoad(initial);
     setError("");
     try {
       const memberships = await getMyMemberships();
       const active = memberships.find((m) => m.isActive);
       if (!active) {
         setError("You're not currently in an active cohort.");
-        setLoading(false);
         return;
       }
 
@@ -104,12 +104,12 @@ export default function TaskDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load task");
     } finally {
-      setLoading(false);
+      endLoad(initial);
     }
   }
 
   useEffect(() => {
-    loadAll();
+    loadAll(true);
   }, [assignmentId]);
 
   async function handleStatusChange(status: (typeof SETTABLE_STATUSES)[number]) {
@@ -199,6 +199,8 @@ export default function TaskDetailPage() {
         <span className="text-muted">›</span>
         <span className="text-foreground font-semibold">{assignment.task.title}</span>
       </div>
+
+      {refreshing && <p className="text-xs text-muted mb-4">Syncing…</p>}
 
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{error}</p>}
 

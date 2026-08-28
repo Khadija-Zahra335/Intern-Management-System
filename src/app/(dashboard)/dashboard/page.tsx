@@ -13,13 +13,14 @@ import {
 import { CreateCohortForm } from "@/app/(dashboard)/cohorts/CreateCohortForm";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { useAuth } from "@/context/AuthContext";
+import { useLoadState } from "@/hooks/useLoadState";
 
 export default function DashboardPage() {
     const { user } = useAuth();
     const firstName = user?.name?.split(" ")[0] || "Mentor";
     const [summary, setSummary] = useState<DashboardSummary | null>(null);
     const [pending, setPending] = useState<PendingReview[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { loading, refreshing, startLoad, endLoad } = useLoadState();
     const [error, setError] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
 
@@ -52,8 +53,8 @@ export default function DashboardPage() {
     }, [summary, search, sortBy]);
 
 
-    async function loadAll() {
-        setLoading(true);
+    async function loadAll(initial = false) {
+        startLoad(initial);
         try {
             const [s, p] = await Promise.all([getDashboardSummary(), getDashboardPendingReviews()]);
             setSummary(s);
@@ -61,12 +62,12 @@ export default function DashboardPage() {
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load dashboard");
         } finally {
-            setLoading(false);
+            endLoad(initial);
         }
     }
 
     useEffect(() => {
-        loadAll();
+        loadAll(true);
     }, []);
 
     if (loading) return <p className="text-sm text-muted">Loading...</p>;
@@ -83,6 +84,7 @@ export default function DashboardPage() {
                     <div>
                         <h1 className="text-2xl font-bold text-foreground">Welcome back, {firstName} 👋</h1>
                         <p className="text-sm text-muted">Here&apos;s what&apos;s happening across your cohorts.</p>
+                        {refreshing && <p className="text-xs text-muted mt-1">Syncing…</p>}
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="relative">

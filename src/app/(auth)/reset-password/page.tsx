@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { resetPassword } from "@/lib/api";
 import { AuthCard } from "@/components/AuthCard";
+import { PasswordInput } from "@/components/PasswordInput";
+import { FormLabel } from "@/components/FormLabel";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -64,13 +66,11 @@ function ResetPasswordForm() {
         <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
       )}
 
-      <label className="block text-sm font-medium text-foreground mb-1.5">New password</label>
-      <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
-        className="w-full mb-4 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
+      <FormLabel required>New password</FormLabel>
+      <PasswordInput required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} wrapperClassName="mb-4" />
 
-      <label className="block text-sm font-medium text-foreground mb-1.5">Confirm new password</label>
-      <input type="password" required minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-        className="w-full mb-2 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
+      <FormLabel required>Confirm new password</FormLabel>
+      <PasswordInput required minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} wrapperClassName="mb-2" />
       <p className="text-xs text-muted mb-6">At least 8 characters.</p>
 
       <button type="submit" disabled={loading}

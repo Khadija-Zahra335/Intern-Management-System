@@ -6,6 +6,9 @@ import Link from "next/link";
 import { register, login, saveToken } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { AuthCard } from "@/components/AuthCard";
+import { PasswordInput } from "@/components/PasswordInput";
+import { FormLabel } from "@/components/FormLabel";
+
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -40,17 +43,17 @@ export default function RegisterPage() {
           <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
         )}
 
-        <label className="block text-sm font-medium text-foreground mb-1.5">Full name</label>
+        <FormLabel required>Full name</FormLabel>
         <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
           className="w-full mb-4 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
 
-        <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+        <FormLabel required>Email</FormLabel>
+
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@musketeertech.com"
           className="w-full mb-4 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
 
-        <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
-        <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-2 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
+        <FormLabel required>Password</FormLabel>
+        <PasswordInput required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} wrapperClassName="mb-2" />
         <p className="text-xs text-muted mb-6">At least 8 characters.</p>
 
         <button type="submit" disabled={loading}
