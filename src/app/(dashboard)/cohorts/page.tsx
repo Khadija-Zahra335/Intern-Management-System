@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getDashboardSummary, DashboardCohortProgress } from "@/lib/api";
+import { getCohortsOverview, DashboardCohortProgress } from "@/lib/api";
 import { CreateCohortForm } from "@/app/(dashboard)/cohorts/CreateCohortForm";
 import { formatDateRange } from "@/lib/format";
 
@@ -18,8 +18,8 @@ export default function CohortsPage() {
   async function loadCohorts() {
     setLoading(true);
     try {
-      const summary = await getDashboardSummary();
-      setCohorts(summary.cohorts);
+      const { cohorts } = await getCohortsOverview();
+      setCohorts(cohorts);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load cohorts");
     } finally {
@@ -102,7 +102,6 @@ export default function CohortsPage() {
                   <tr key={cohort.id} className="hover:bg-accent-soft/40 transition-colors">
                     <td className="px-5 py-4 font-semibold text-foreground whitespace-nowrap">{cohort.name}</td>
                     <td className="px-5 py-4 text-muted whitespace-nowrap">
-                      {/* {new Date(cohort.startDate).toLocaleDateString()} – {new Date(cohort.endDate).toLocaleDateString()} */}
                       {formatDateRange(cohort.startDate, cohort.endDate)}
                     </td>
                     <td className="px-5 py-4 text-foreground">{cohort.internsCount}</td>

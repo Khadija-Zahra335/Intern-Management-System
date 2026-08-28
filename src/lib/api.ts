@@ -469,6 +469,9 @@ export type DashboardSummary = {
 export function getDashboardSummary() {
   return request<DashboardSummary>("/dashboard/summary");
 }
+export function getCohortsOverview() {
+  return request<{ cohorts: DashboardCohortProgress[] }>("/cohorts/overview");
+}
 
 export type PendingReview = {
   assignmentId: string;

@@ -4,6 +4,14 @@ import { getUserFromRequest, unauthorized, forbidden } from "@/lib/auth";
 import { computeWeekNumber, startOfThisWeekPKT } from "@/lib/weeks";
 import { isCohortActive } from "@/lib/cohorts";
 
+// GET /api/dashboard/summary — mentor-only.
+// Every number here is scoped to active (non-archived) cohorts only — the
+// same rule as isCohortActive() in src/lib/cohorts.ts, written out as a
+// Prisma `where` since that helper is a plain JS function, not a query
+// filter. Keep these two in sync if that rule ever changes. Archived
+// cohorts don't contribute to this dashboard anymore — their data is still
+// fully intact and visible on their own cohort page, and on the /cohorts
+// list page via GET /api/cohorts/overview.
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return unauthorized();
@@ -12,14 +20,24 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const weekStart = startOfThisWeekPKT(now);
 
+  const activeCohortFilter = { isActive: true, endDate: { gte: now } };
+
   const [tasksPublishedThisWeek, linkedInPostsThisWeek, cohorts] = await Promise.all([
     prisma.task.count({
-      where: { state: "PUBLISHED", createdAt: { gte: weekStart } },
+      where: {
+        state: "PUBLISHED",
+        createdAt: { gte: weekStart },
+        cohort: activeCohortFilter,
+      },
     }),
     prisma.linkedInPost.count({
-      where: { loggedAt: { gte: weekStart } },
+      where: {
+        loggedAt: { gte: weekStart },
+        membership: { cohort: activeCohortFilter },
+      },
     }),
     prisma.cohort.findMany({
+      where: activeCohortFilter,
       orderBy: { startDate: "desc" },
       include: {
         memberships: {
