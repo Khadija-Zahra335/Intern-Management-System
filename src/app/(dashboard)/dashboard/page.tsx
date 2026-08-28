@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatDateRange } from "@/lib/format";
 import Link from "next/link";
+
 import {
     getDashboardSummary,
     getDashboardPendingReviews,
@@ -21,6 +22,35 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
+
+    const [search, setSearch] = useState("");
+    const [sortBy, setSortBy] = useState<"default" | "name-asc" | "interns-desc" | "completion-desc" | "start-desc">("default");
+    const visibleCohorts = useMemo(() => {
+        if (!summary) return [];
+        const q = search.trim().toLowerCase();
+        const filtered = q
+            ? summary.cohorts.filter((c) => c.name.toLowerCase().includes(q))
+            : summary.cohorts;
+
+        const sorted = [...filtered];
+        switch (sortBy) {
+            case "name-asc":
+                sorted.sort((a, b) => a.name.localeCompare(b.name));
+                break;
+            case "interns-desc":
+                sorted.sort((a, b) => b.internsCount - a.internsCount);
+                break;
+            case "completion-desc":
+                sorted.sort((a, b) => b.taskCompletionPercent - a.taskCompletionPercent);
+                break;
+            case "start-desc":
+                sorted.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+                break;
+            // "default": keep the order the API returned
+        }
+        return sorted;
+    }, [summary, search, sortBy]);
+
 
     async function loadAll() {
         setLoading(true);
@@ -49,17 +79,29 @@ export default function DashboardPage() {
     return (
         <div className="flex gap-6 items-start">
             <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between mb-8 gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-foreground">Welcome back, {firstName} 👋</h1>
                         <p className="text-sm text-muted">Here&apos;s what&apos;s happening across your cohorts.</p>
                     </div>
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2.5"
-                    >
-                        + New Cohort
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <IconSearch className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search cohorts..."
+                                className="w-56 pl-9 pr-3 py-2.5 text-sm border border-border rounded-lg bg-white placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                        </div>
+                        <button
+                            onClick={() => setShowForm(true)}
+                            className="rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2.5 shrink-0"
+                        >
+                            + New Cohort
+                        </button>
+                    </div>
                 </div>
 
                 {showForm && (
@@ -106,17 +148,32 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     <div className="lg:col-span-2 bg-white border border-border rounded-2xl overflow-hidden">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                            <h2 className="font-semibold text-foreground">Cohort Overview</h2>
-                            <Link href="/cohorts" className="text-sm text-primary hover:underline">
-                                View all cohorts →
-                            </Link>
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-border gap-3">
+                            <h2 className="font-semibold text-foreground shrink-0">Cohort Overview</h2>
+                            <div className="flex items-center gap-3">
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                                    className="text-xs font-medium text-muted border border-border rounded-lg pl-2.5 pr-7 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                >
+                                    <option value="default">Sort: Default</option>
+                                    <option value="name-asc">Name (A–Z)</option>
+                                    <option value="interns-desc">Most interns</option>
+                                    <option value="completion-desc">Highest completion</option>
+                                    <option value="start-desc">Newest start date</option>
+                                </select>
+                                <Link href="/cohorts" className="text-sm text-primary hover:underline shrink-0">
+                                    View all cohorts →
+                                </Link>
+                            </div>
                         </div>
                         {summary.cohorts.length === 0 ? (
                             <p className="text-sm text-muted px-5 py-6">No cohorts yet.</p>
+                        ) : visibleCohorts.length === 0 ? (
+                            <p className="text-sm text-muted px-5 py-6">No cohorts match &quot;{search}&quot;.</p>
                         ) : (
                             <div className="divide-y divide-border max-h-[420px] overflow-y-auto">
-                                {summary.cohorts.map((c) => (
+                                {visibleCohorts.map((c) => (
                                     <div key={c.id} className="px-5 py-5">
                                         <div className="flex items-start justify-between gap-3 mb-4">
                                             <div className="min-w-0">
@@ -151,7 +208,7 @@ export default function DashboardPage() {
                                                 </div>
                                             </div>
 
-                                                          <div className="flex items-center gap-2.5">
+                                            <div className="flex items-center gap-2.5">
                                                 <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                                                     <IconCalendar className="w-4.5 h-4.5" />
                                                 </div>
@@ -255,7 +312,7 @@ function StatTile({
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${swatch}`}>
                 <Icon className="w-5 h-5" />
             </div>
-                        <div className="min-w-0">
+            <div className="min-w-0">
                 <p className="text-[11px] font-medium text-muted uppercase tracking-wide leading-snug">{label}</p>
                 <p className="text-xl font-bold text-foreground leading-tight mt-0.5">{value}</p>
             </div>
@@ -388,6 +445,15 @@ function IconClipboardCheck({ className }: { className?: string }) {
             <rect x="4" y="3" width="12" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
             <path d="M7.5 3V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V3" stroke="currentColor" strokeWidth="1.6" />
             <path d="M6.5 10.2l2 2 4-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function IconSearch({ className }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 20 20" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+            <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M13.5 13.5L17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
     );
 }
