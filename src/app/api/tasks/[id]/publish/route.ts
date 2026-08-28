@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest, forbidden, unauthorized } from "@/lib/auth";
+import { isCohortActive } from "@/lib/cohorts";
 
 export async function POST(
   req: NextRequest,
@@ -21,7 +22,7 @@ export async function POST(
   }
 
   const cohort = await prisma.cohort.findUnique({ where: { id: task.cohortId } });
-  if (!cohort || !cohort.isActive) {
+  if (!cohort || !isCohortActive(cohort)) {
     return NextResponse.json(
       { error: "This cohort is archived — tasks can't be published here." },
       { status: 400 }

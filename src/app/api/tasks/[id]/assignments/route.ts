@@ -2,21 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest, unauthorized, forbidden } from "@/lib/auth";
 import { addAssignmentSchema } from "@/lib/validators/assignment";
+import { isCohortActive } from "@/lib/cohorts";
 
-// POST /api/tasks/[id]/assignments — mentor-only.
-// Assigns this task to one intern's membership. This is the per-task
-// counterpart to the bulk assignment that already happens at publish time
-// (every active member) and at membership-add time (every published task,
-// see cohorts/[id]/members/route.ts) — for the case where a mentor wants to
-// hand this specific task to one specific intern who wasn't swept up by
-// either of those (e.g. an intern re-added after being removed from just
-// this task, see DELETE in assignments/[membershipId]/route.ts).
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUserFromRequest(req);
-  if (!user) return unauthorized(); 
+  if (!user) return unauthorized();
   if (user.role !== "MENTOR") return forbidden();
 
   const { id: taskId } = await params;
@@ -30,6 +23,14 @@ export async function POST(
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
+
+  const cohort = await prisma.cohort.findUnique({ where: { id: task.cohortId } });
+  if (!cohort || !isCohortActive(cohort)) {
+    return NextResponse.json(
+      { error: "This cohort is archived — interns can't be assigned to tasks here." },
+      { status: 400 }
+    );
   }
 
   const membership = await prisma.membership.findUnique({
@@ -69,9 +70,6 @@ export async function POST(
   }
 }
 
-// GET /api/tasks/[id]/assignments — mentor-only.
-// Every intern's assignment for one task, for the new task detail page's
-// "Assignments" table. Read-only, doesn't touch any existing route.
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

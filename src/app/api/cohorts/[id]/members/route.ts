@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest, forbidden, unauthorized } from "@/lib/auth";
 import { addMemberSchema } from "@/lib/validators/membership";
+import { isCohortActive } from "@/lib/cohorts";
 
 export async function POST(
   req: NextRequest,
@@ -23,7 +24,7 @@ export async function POST(
   if (!cohort) {
     return NextResponse.json({ error: "Cohort not found" }, { status: 404 });
   }
-  if (!cohort.isActive) {
+  if (!isCohortActive(cohort)) {
     return NextResponse.json(
       { error: "This cohort is archived — interns can't be added." },
       { status: 400 }
@@ -47,11 +48,6 @@ export async function POST(
     );
   }
 
-  // A prior Membership row for this (user, cohort) pair may already exist and
-  // just be inactive (the intern was removed earlier — see the DELETE handler
-  // in members/[membershipId]/route.ts). The unique constraint is on
-  // (userId, cohortId) regardless of isActive, so a plain create() would 409
-  // even though re-adding them is exactly what the mentor is asking for here.
   const existing = await prisma.membership.findUnique({
     where: { userId_cohortId: { userId: intern.id, cohortId } },
   });
@@ -63,15 +59,7 @@ export async function POST(
     );
   }
 
-    try {
-    // Create (or reactivate) the membership only. Deliberately NOT
-    // backfilling TaskAssignment rows for already-PUBLISHED tasks anymore —
-    // an intern added (or re-added) now stays invisible to every existing
-    // task until a mentor explicitly assigns them to it (the "Assign an
-    // intern" picker on the task detail page, POST
-    // /api/tasks/[id]/assignments). Publishing a NEW task is unaffected by
-    // this change — that still auto-assigns every currently-active member
-    // (see POST /api/tasks/[id]/publish).
+  try {
     const membership = existing
       ? await prisma.membership.update({
           where: { id: existing.id },

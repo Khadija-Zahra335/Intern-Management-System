@@ -2,9 +2,10 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { getCohorts, getCohortMembers, getCohortProgress, removeCohortMember, Cohort, MemberProgress } from "@/lib/api";
+import { getCohorts, getCohortMembers, getCohortProgress, removeCohortMember, archiveCohort, Cohort, MemberProgress } from "@/lib/api";
 import { AddMemberForm } from "@/app/(dashboard)/cohorts/[id]/AddMemberForm";
 import { formatDateRange } from "@/lib/format";
+import { isCohortActive } from "@/lib/cohorts";
 
 const AVATAR_PALETTES = [
   { bg: "bg-purple-100", text: "text-purple-700" },
@@ -21,9 +22,6 @@ function avatarPalette(seed: string) {
   return AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
 }
 
-// avatarUrl isn't in the data model yet (see chat) — this already prefers a
-// real photo when one shows up later; for now every call passes no avatarUrl
-// and it falls back to the colored-initial circle.
 function Avatar({ seed, name, avatarUrl }: { seed: string; name: string; avatarUrl?: string | null }) {
   if (avatarUrl) {
     return <img src={avatarUrl} alt={name} className="w-9 h-9 rounded-full object-cover shrink-0" />;
@@ -73,6 +71,10 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
   const [error, setError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+
   async function loadData() {
     setLoading(true);
     try {
@@ -86,11 +88,6 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
       const joinedById = new Map(memberships.map((m) => [m.id, m.joinedAt]));
       setRows(
         progress
-          // /progress returns every membership ever (active or removed) —
-          // this list is "current members", so only show active ones. A
-          // removed intern's history is still intact in the DB, just not
-          // shown here (matches GET /members, which already filters the
-          // same way).
           .filter((p) => p.isActive)
           .map((p) => {
             const avgRating =
@@ -111,8 +108,6 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
     loadData();
   }, [id]);
 
-  // Soft removal — Membership.isActive: false, history untouched. See
-  // src/app/api/cohorts/[id]/members/[membershipId]/route.ts.
   async function handleRemove(membershipId: string, name: string) {
     if (!confirm(`Remove ${name} from this cohort? Their task/feedback/attendance history is kept — you can re-add them later by email.`)) {
       return;
@@ -126,6 +121,31 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
       setError(err instanceof Error ? err.message : "Failed to remove member");
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  function openArchiveConfirm() {
+    setArchiveError(null);
+    setShowArchiveConfirm(true);
+  }
+
+  function closeArchiveConfirm() {
+    if (archiving) return;
+    setShowArchiveConfirm(false);
+  }
+
+  async function confirmArchive() {
+    if (!cohort) return;
+    setArchiving(true);
+    setArchiveError(null);
+    try {
+      await archiveCohort(id);
+      setShowArchiveConfirm(false);
+      await loadData();
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : "Failed to archive cohort");
+    } finally {
+      setArchiving(false);
     }
   }
 
@@ -144,7 +164,7 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
       )
       : 0;
 
-    const totalCompleted = rows.reduce((sum, r) => sum + r.taskCompletion.completed, 0);
+  const totalCompleted = rows.reduce((sum, r) => sum + r.taskCompletion.completed, 0);
   const totalTasks = rows.reduce((sum, r) => sum + r.taskCompletion.total, 0);
   const overallPercent = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0;
 
@@ -153,6 +173,8 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
   const avgRatingCohort =
     ratedRows.length > 0 ? ratedRows.reduce((sum, r) => sum + (r.avgRating as number), 0) / ratedRows.length : null;
   const totalLinkedInLogs = rows.reduce((sum, r) => sum + r.linkedInWeeksLogged, 0);
+
+  const active = cohort ? isCohortActive(cohort) : false;
 
   return (
     <div>
@@ -169,10 +191,10 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
           <h1 className="text-2xl font-bold text-foreground">{cohort?.name ?? "Cohort"}</h1>
           {cohort && (
             <span
-              className={`text-xs font-semibold px-3 py-1 rounded-full ${cohort.isActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+              className={`text-xs font-semibold px-3 py-1 rounded-full ${active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
                 }`}
             >
-              {cohort.isActive ? "Active" : "Archived"}
+              {active ? "Active" : "Archived"}
             </span>
           )}
         </div>
@@ -183,8 +205,16 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
           >
             Manage tasks
           </Link>
-          {cohort?.isActive ? (
-            <AddMemberForm cohortId={id} existingEmails={rows.map((r) => r.user.email)} onAdded={loadData} />
+          {active ? (
+            <>
+              <AddMemberForm cohortId={id} existingEmails={rows.map((r) => r.user.email)} onAdded={loadData} />
+              <button
+                onClick={openArchiveConfirm}
+                className="text-xs font-semibold text-red-600 border border-red-200 rounded-lg px-4 py-2.5 hover:bg-red-50 transition-colors"
+              >
+                Archive cohort
+              </button>
+            </>
           ) : (
             <span className="text-xs font-medium text-muted bg-gray-100 rounded-lg px-4 py-2.5">
               Archived — can&apos;t add interns
@@ -193,7 +223,7 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <StatTile
           label="Program dates"
           value={cohort ? formatDateRange(cohort.startDate, cohort.endDate) : "—"}
@@ -329,6 +359,72 @@ export default function CohortDetailPage({ params }: { params: Promise<{ id: str
           </div>
         )}
       </div>
+
+      {showArchiveConfirm && cohort && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={closeArchiveConfirm}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Archive cohort</h2>
+              <button
+                onClick={closeArchiveConfirm}
+                disabled={archiving}
+                className="text-muted hover:text-foreground text-lg leading-none disabled:opacity-50"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-5">
+              <div className="w-11 h-11 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-4">
+                <IconAlert className="w-5 h-5" />
+              </div>
+
+              <p className="text-sm font-semibold text-foreground mb-3">
+                Archive &quot;{cohort.name}&quot;?
+              </p>
+
+              <ul className="text-sm text-muted leading-relaxed space-y-1.5 mb-3 list-disc pl-4">
+                <li>Mentors won&apos;t be able to add new interns or create new tasks in this cohort after this.</li>
+                <li>Every member, task, submission, feedback entry, and attendance record already here stays exactly as it is and stays fully visible.</li>
+              </ul>
+
+              <p className="text-sm font-semibold text-red-600 mb-4">
+                This action can&apos;t be undone from the app.
+              </p>
+
+              {archiveError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
+                  {archiveError}
+                </p>
+              )}
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={closeArchiveConfirm}
+                  disabled={archiving}
+                  className="text-sm font-semibold text-foreground border border-border rounded-lg px-4 py-2.5 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmArchive}
+                  disabled={archiving}
+                  className="text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg px-4 py-2.5 disabled:opacity-50 transition-colors"
+                >
+                  {archiving ? "Archiving…" : "Archive cohort"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

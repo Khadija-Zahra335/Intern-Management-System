@@ -168,6 +168,14 @@ export function createCohort(input: { name: string; startDate: string; endDate: 
   });
 }
 
+
+export function archiveCohort(cohortId: string) {
+  return request<Cohort>(`/cohorts/${cohortId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ isActive: false }),
+  });
+}
+
 export type Membership = {
   id: string;
   userId: string;

@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest, unauthorized, forbidden } from "@/lib/auth";
 import { computeWeekNumber, startOfThisWeekPKT } from "@/lib/weeks";
-
-// GET /api/dashboard/summary — mentor-only.
-// Rolls up the numbers the new mentor Dashboard page needs: aggregate stat
-// tiles + a per-cohort progress table. Read-only, doesn't touch any
-// existing route's data or behavior.
+import { isCohortActive } from "@/lib/cohorts";
 
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
@@ -70,9 +66,6 @@ export async function GET(req: NextRequest) {
         ratingCount += 1;
       }
 
-      // Overdue: not yet submitted/completed, and the task's own due date
-      // has fully passed (end of that calendar day) — same rule as the
-      // per-cohort progress endpoint and the intern-facing pages.
       for (const a of m.assignments) {
         if (a.status === "COMPLETED" || a.status === "SUBMITTED") continue;
         if (!a.task.endDate) continue;
@@ -92,7 +85,7 @@ export async function GET(req: NextRequest) {
         totalAssignments > 0 ? Math.round((completedAssignments / totalAssignments) * 100) : 0,
       linkedInCompletionPercent:
         cohort.memberships.length > 0 ? Math.round(linkedInPercentSum / cohort.memberships.length) : 0,
-      status: cohort.isActive ? "Active" : "Archived",
+      status: isCohortActive(cohort) ? "Active" : "Archived",
     };
   });
 

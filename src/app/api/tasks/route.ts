@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest, forbidden, unauthorized } from "@/lib/auth";
 import { createTaskSchema } from "@/lib/validators/task";
+import { isCohortActive } from "@/lib/cohorts";
 
-// Creating Task in Draft state (nothing get assigned yet)
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return unauthorized();
@@ -19,16 +19,13 @@ export async function POST(req: NextRequest) {
   if (!cohort) {
     return NextResponse.json({ error: "Cohort not found" }, { status: 404 });
   }
-  if (!cohort.isActive) {
+  if (!isCohortActive(cohort)) {
     return NextResponse.json(
       { error: "This cohort is archived — new tasks can't be created here." },
       { status: 400 }
     );
   }
 
-  // A task has to live inside its cohort's program dates — nothing enforced
-  // this before, so a task could be created starting before the cohort even
-  // begins (or ending after it's over).
   if (parsed.data.startDate < cohort.startDate) {
     return NextResponse.json(
       {
@@ -54,7 +51,6 @@ export async function POST(req: NextRequest) {
       description: parsed.data.description,
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,
-      // state defaults to DRAFT, aiGenerated defaults to false
     },
   });
 
