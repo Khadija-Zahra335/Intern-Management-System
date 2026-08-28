@@ -1,17 +1,60 @@
-const TOKEN_COOKIE = "im_token";
+const TOKEN_PREFIX = "im_token:";
+const TAB_ID_KEY = "im_tab_id";
+const TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function randomId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+// Each browser tab gets its own id, kept in sessionStorage — that's scoped
+// per tab, so it survives reloads in this tab but is never visible to a
+// different tab. The actual token lives in localStorage under a key built
+// from that id, with an expiry timestamp. Splitting it this way is what
+// lets a tab stay logged in for 7 days (surviving reloads, and most
+// "reopen this tab" / browser-restore flows, since those restore
+// sessionStorage) while still keeping simultaneously open mentor/intern
+// tabs from overwriting each other's login — the original bug. A brand
+// new tab that's never logged in before still needs a fresh login, since
+// by definition it has no tab id yet to look up.
+function tabId(): string {
+  let id = window.sessionStorage.getItem(TAB_ID_KEY);
+  if (!id) {
+    id = randomId();
+    window.sessionStorage.setItem(TAB_ID_KEY, id);
+  }
+  return id;
+}
+
+function tokenKey(): string {
+  return `${TOKEN_PREFIX}${tabId()}`;
+}
 
 export function saveToken(token: string) {
-  document.cookie = `${TOKEN_COOKIE}=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(tokenKey(), JSON.stringify({ token, expiresAt: Date.now() + TOKEN_MAX_AGE_MS }));
 }
 
 export function getToken(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp(`(?:^|; )${TOKEN_COOKIE}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(tokenKey());
+  if (!raw) return null;
+  try {
+    const { token, expiresAt } = JSON.parse(raw) as { token: string; expiresAt: number };
+    if (Date.now() > expiresAt) {
+      window.localStorage.removeItem(tokenKey());
+      return null;
+    }
+    return token;
+  } catch {
+    window.localStorage.removeItem(tokenKey());
+    return null;
+  }
 }
 
 export function clearToken() {
-  document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0`;
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(tokenKey());
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
