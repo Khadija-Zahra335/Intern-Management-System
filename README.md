@@ -42,7 +42,6 @@ Both roles use a shared sidebar-based layout (Linear/Notion-style admin dashboar
 
 **Deployed to Vercel**, connected to the same Neon database used in development.
 
-Not yet done: dead-route cleanup (a couple of superseded pages are still present but unlinked), a de-duplication/query-optimization pass that was explicitly deferred, and an in-app notification system (scoped, not built). None of these block normal use of the app.
 
 ## AI features
 
