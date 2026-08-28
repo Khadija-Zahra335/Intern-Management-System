@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { FormLabel } from "@/components/FormLabel";
 import {
   Cohort,
   Membership,
@@ -118,7 +119,7 @@ export default function FeedbackPage() {
 
       <form onSubmit={handleSubmit} className="border border-border rounded-lg p-4 bg-white mb-8 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Week number</label>
+          <FormLabel required className="block text-sm font-medium text-foreground mb-1">Week number</FormLabel>
           <input
             type="number"
             min={1}
@@ -129,7 +130,7 @@ export default function FeedbackPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Rating</label>
+          <FormLabel required className="block text-sm font-medium text-foreground mb-1">Rating</FormLabel>
           <div className="flex gap-2">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
@@ -149,7 +150,7 @@ export default function FeedbackPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Comment</label>
+          <FormLabel required className="block text-sm font-medium text-foreground mb-1">Comment</FormLabel>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}

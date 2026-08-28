@@ -7,18 +7,27 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <nav className="border-b border-border bg-white">
         <div className="px-6 md:px-12 lg:px-16 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <a
+            href="https://musketeerstech.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2"
+          >
             <div className="w-7 h-7 relative shrink-0">
               <Image src="/logo.png" alt="Musketeer Tech logo" fill className="object-contain" priority />
             </div>
             <span className="font-extrabold text-lg tracking-tight text-foreground">Musketeer Tech</span>
+          </a>
+          <div className="flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
+              <a href="#workflow" className="hover:text-foreground">Workflow</a>
+              <a href="#stats" className="hover:text-foreground">Overview</a>
+              <a href="#about" className="hover:text-foreground">About</a>
+            </div>
+            <Link href="/login" className="rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-medium px-5 py-2.5 transition-colors">
+              Sign In
+            </Link>
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
-            <a href="#workflow" className="hover:text-foreground">Workflow</a>
-          </div>
-          <Link href="/login" className="rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-medium px-5 py-2.5 transition-colors">
-            Sign In
-          </Link>
         </div>
       </nav>
 
@@ -86,7 +95,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-accent-soft py-14">
+      <section id="stats" className="bg-accent-soft py-14">
         <div className="px-6 md:px-12 lg:px-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
             { value: "11", label: "Data models tracked" },
@@ -129,6 +138,37 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <section id="about" className="py-20 bg-white border-t border-border">
+  <div className="px-6 md:px-12 lg:px-16 grid md:grid-cols-5 gap-12">
+    <div className="md:col-span-2">
+  <p className="text-xs font-bold mb-4 tracking-wide text-blue-800">ABOUT MUSKETEER TECH</p>
+
+     <p className="text-2xl font-semibold leading-snug text-foreground">
+        &quot;AI doesn&apos;t replace great engineering. It amplifies it.&quot;
+      </p>
+      <p className="text-sm mt-4 text-muted">
+        An AI-native software development company based in Austin, Texas — pairing senior
+        engineers with AI to build production-ready software faster.
+      </p>
+    </div>
+    <div className="md:col-span-3 space-y-6">
+      {[
+        { letter: "A", title: "AI-native development", desc: "Custom AI agents, SaaS platforms, web apps, and intelligent automation, built for startups and scale-ups." },
+        { letter: "B", title: "70+ projects delivered", desc: "From MVP validation to fractional CTO consulting, helping companies scale from early-stage to Series A and beyond." },
+        { letter: "C", title: "Engineering-first, AI-accelerated", desc: "Senior engineers paired with modern AI techniques — aiming for 3x faster delivery without cutting corners." },
+      ].map((item, i, arr) => (
+        <div key={item.letter} className={`flex gap-4 items-start ${i < arr.length - 1 ? "border-b border-dark-border pb-6" : ""}`}>
+          <span className="font-bold text-sm mt-0.5 text-accent">{item.letter}</span>
+          <div>
+            <h3 className="font-semibold mb-1">{item.title}</h3>
+            <p className="text-sm text-white-muted">{item.desc}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
 
       <footer className="py-8 border-t border-border">
         <div className="px-6 md:px-12 lg:px-16 flex items-center justify-between text-sm text-muted">

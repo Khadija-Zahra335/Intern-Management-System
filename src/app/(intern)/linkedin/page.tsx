@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { computeWeekNumber } from "@/lib/weeks";
 import { formatDate } from "@/lib/format";
+import { useLoadState } from "@/hooks/useLoadState";
 
 function LinkedInIcon() {
   return (
@@ -52,15 +53,15 @@ const GUIDELINES = [
 export default function LinkedInPage() {
   const [membership, setMembership] = useState<MyMembership | null>(null);
   const [posts, setPosts] = useState<LinkedInPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { loading, refreshing, startLoad, endLoad } = useLoadState();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [weekNumber, setWeekNumber] = useState(1);
   const [url, setUrl] = useState("");
   const urlInputRef = useRef<HTMLInputElement>(null);
 
-  async function loadAll() {
-    setLoading(true);
+  async function loadAll(initial = false) {
+    startLoad(initial);
     setError(null);
     try {
       const memberships = await getMyMemberships();
@@ -74,12 +75,12 @@ export default function LinkedInPage() {
     } catch (e: any) {
       setError(e.message ?? "Failed to load LinkedIn posts");
     } finally {
-      setLoading(false);
+      endLoad(initial);
     }
   }
 
   useEffect(() => {
-    loadAll();
+    loadAll(true);
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -128,6 +129,7 @@ export default function LinkedInPage() {
         <p className="text-sm font-medium text-primary mt-1 ml-8">
           {completedCount} / {totalWeeks} weeks posted
         </p>
+        {refreshing && <p className="text-xs text-muted mt-1 ml-8">Syncing…</p>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
@@ -209,7 +211,7 @@ export default function LinkedInPage() {
                           Week {p.weekNumber}
                         </td>
                         <td className="px-6 py-4 max-w-xs">
-                          <a
+                        <a  
                             href={p.url}
                             target="_blank"
                             rel="noopener noreferrer"

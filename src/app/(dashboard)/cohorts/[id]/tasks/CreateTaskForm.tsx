@@ -6,6 +6,7 @@ import { createTask, publishTask, generateTaskDraft, type Cohort } from "@/lib/a
 
 import { MarkdownText } from "@/components/MarkdownText";
 import { formatDateRange } from "@/lib/format";
+import { FormLabel } from "@/components/FormLabel";
 
 const MAX_TOPIC_LENGTH = 300;
 
@@ -142,7 +143,7 @@ export function CreateTaskForm({
       )}
 
       <div>
-        <label className="block text-xs font-medium text-foreground mb-1">Task title</label>
+        <FormLabel required className="block text-xs font-medium text-foreground mb-1">Task title</FormLabel>
         <input
           value={title}
           onChange={(e) => {
@@ -156,7 +157,7 @@ export function CreateTaskForm({
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium text-foreground">Description</label>
+          <FormLabel required className="block text-xs font-medium text-foreground">Description</FormLabel>
           <button
             type="button"
             onClick={() => setShowPreview((v) => !v)}
@@ -192,7 +193,7 @@ export function CreateTaskForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-foreground mb-1">Start date</label>
+          <FormLabel required className="block text-xs font-medium text-foreground mb-1">Start date</FormLabel>
           <input
             type="date"
             value={startDate}
@@ -204,8 +205,7 @@ export function CreateTaskForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-foreground mb-1">End date</label>
-          <input
+          <FormLabel required className="block text-xs font-medium text-foreground mb-1">End date</FormLabel>          <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}

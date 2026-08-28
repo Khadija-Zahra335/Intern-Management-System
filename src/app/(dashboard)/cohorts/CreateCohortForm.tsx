@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createCohort } from "@/lib/api";
+import { FormLabel } from "@/components/FormLabel";
 
 export function CreateCohortForm({ onCreated, onClose }: { onCreated: () => void; onClose: () => void }) {
   const [name, setName] = useState("");
@@ -53,7 +54,7 @@ export function CreateCohortForm({ onCreated, onClose }: { onCreated: () => void
           />
           <div className="grid grid-cols-2 gap-4 mb-5">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Start date</label>
+              <FormLabel required>Start date</FormLabel>
               <input
                 type="date"
                 required
@@ -63,7 +64,7 @@ export function CreateCohortForm({ onCreated, onClose }: { onCreated: () => void
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">End date</label>
+              <FormLabel required>End date</FormLabel>
               <input
                 type="date"
                 required

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { forgotPassword } from "@/lib/api";
 import { AuthCard } from "@/components/AuthCard";
+import { FormLabel } from "@/components/FormLabel";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -41,7 +42,7 @@ export default function ForgotPasswordPage() {
           {error && (
             <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
           )}
-          <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+          <FormLabel required>Email</FormLabel>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@musketeertech.com"
             className="w-full mb-6 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary" />
 

@@ -29,7 +29,7 @@ export function AssistantPanel() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,21 +124,19 @@ export function AssistantPanel() {
   }
 
   if (collapsed) {
-    return (
-      <div className="w-14 shrink-0 bg-dark-border border border-dark-bg rounded-2xl flex flex-col items-center py-4 h-[calc(100vh-8rem)] sticky top-8">        <button
-          onClick={() => setCollapsed(false)}
-          className="w-9 h-9 rounded-lg bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors"
-          aria-label="Expand AI Assistant"
-        >
-          <ChatBubbleIcon className="w-4 h-4" />
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-72 shrink-0 bg-white border border-border rounded-2xl flex flex-col h-[calc(100vh-8rem)] sticky top-8 overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-4 bg-dark-border border-b border-dark-border">
+    <button
+      onClick={() => setCollapsed(false)}
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-dark-border hover:bg-dark-bg text-white rounded-full pl-4 pr-5 py-3 shadow-lg transition-colors"
+      aria-label="Open AI Assistant"
+    >
+      <SparkleIcon className="w-4 h-4" />
+      <span className="text-sm font-semibold">Ask AI</span>
+    </button>
+  );
+}
+  return (
+<div className="fixed bottom-6 right-6 z-50 w-80 max-w-[calc(100vw-2rem)] bg-white border border-border rounded-2xl flex flex-col h-[32rem] max-h-[calc(100vh-4rem)] shadow-2xl overflow-hidden">      <div className="flex items-center gap-2 px-5 py-4 bg-dark-border border-b border-dark-border">
         <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center shrink-0">
           <ChatBubbleIcon className="w-4 h-4" />
         </div>
@@ -146,12 +144,12 @@ export function AssistantPanel() {
           <h2 className="font-semibold text-white leading-tight">AI Assistant</h2>
           <span className="text-[10px] font-bold uppercase tracking-wide text-dark-muted">BETA</span>
         </div>
-        <button
+                <button
           onClick={() => setCollapsed(true)}
           className="ml-auto w-7 h-7 rounded-lg text-dark-muted hover:bg-white/10 hover:text-white flex items-center justify-center shrink-0 transition-colors"
           aria-label="Collapse AI Assistant"
         >
-          <ChevronIcon className="w-4 h-4" />
+          <CloseIcon className="w-4 h-4" />
         </button>
       </div>
 
@@ -262,6 +260,25 @@ function SendIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" className={className}>
       <path d="M17 3L3 9.5l6 2.5 2 6L17 3z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="currentColor" />
+    </svg>
+  );
+}
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className}>
+      <path
+        d="M10 2l1.4 4.6L16 8l-4.6 1.4L10 14l-1.4-4.6L4 8l4.6-1.4L10 2z"
+        fill="currentColor"
+      />
+      <path d="M16 13l.7 2.3L19 16l-2.3.7L16 19l-.7-2.3L13 16l2.3-.7L16 13z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className}>
+      <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { getCohorts, getTasks, type Cohort, type Task } from "@/lib/api";
 import { markdownPreview } from "@/components/MarkdownText";
+import { useLoadState } from "@/hooks/useLoadState";
 
 import { CreateTaskForm } from "./CreateTaskForm";
 
@@ -16,11 +17,11 @@ export default function CohortTasksPage({
 
   const [cohort, setCohort] = useState<Cohort | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { loading, refreshing, startLoad, endLoad } = useLoadState();
   const [error, setError] = useState("");
 
-  async function load() {
-    setLoading(true);
+  async function load(initial = false) {
+    startLoad(initial);
     setError("");
     try {
       const [cohorts, cohortTasks] = await Promise.all([getCohorts(), getTasks(id)]);
@@ -29,12 +30,12 @@ export default function CohortTasksPage({
     } catch (err: any) {
       setError(err.message ?? "Failed to load tasks");
     } finally {
-      setLoading(false);
+      endLoad(initial);
     }
   }
 
   useEffect(() => {
-    load();
+    load(true);
   }, [id]);
 
   if (loading) return <p className="text-sm text-muted">Loading tasks…</p>;
@@ -50,7 +51,10 @@ export default function CohortTasksPage({
         <span className="text-foreground font-medium">Tasks</span>
       </div>
 
-      <h1 className="text-2xl font-bold text-foreground mb-6">New Task Creator</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground">New Task Creator</h1>
+        {refreshing && <p className="text-xs text-muted mt-1">Syncing…</p>}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2">

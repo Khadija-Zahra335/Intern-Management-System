@@ -12,6 +12,7 @@ import {
   LATE_CHECKIN_NOTE_MESSAGE,
 } from "@/lib/attendanceHours";
 import { pktDayKey } from "@/lib/timezone";
+import { useLoadState } from "@/hooks/useLoadState";
 import {
   getMyMemberships,
   getAttendance,
@@ -147,7 +148,7 @@ function formatHours(h: number) {
 export default function AttendancePage() {
   const [membership, setMembership] = useState<MyMembership | null>(null);
   const [records, setRecords] = useState<Attendance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { loading, refreshing, startLoad, endLoad } = useLoadState();
   const [error, setError] = useState<string | null>(null);
   const [pendingType, setPendingType] = useState<AttendanceType | null>(null);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
@@ -158,8 +159,8 @@ export default function AttendancePage() {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
-  async function loadAll() {
-    setLoading(true);
+  async function loadAll(initial = false) {
+    startLoad(initial);
     setError(null);
     try {
       const memberships = await getMyMemberships();
@@ -172,12 +173,12 @@ export default function AttendancePage() {
     } catch (e: any) {
       setError(e.message ?? "Failed to load attendance");
     } finally {
-      setLoading(false);
+      endLoad(initial);
     }
   }
 
   useEffect(() => {
-    loadAll();
+    loadAll(true);
   }, []);
 
   async function handleAction(type: AttendanceType, note?: string) {
@@ -243,6 +244,7 @@ export default function AttendancePage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Attendance</h1>
         <p className="text-sm text-muted">Log your check-ins and breaks for the day.</p>
+        {refreshing && <p className="text-xs text-muted mt-1">Syncing…</p>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
