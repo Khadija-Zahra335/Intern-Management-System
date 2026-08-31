@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest, unauthorized, forbidden } from "@/lib/auth";
-import { computeWeekNumber, startOfThisWeekPKT } from "@/lib/weeks";
 import { isCohortActive } from "@/lib/cohorts";
+import { computeWeekNumber } from "@/lib/weeks";
 
 // GET /api/dashboard/summary — mentor-only.
 // Every number here is scoped to active (non-archived) cohorts only — the
@@ -18,25 +18,15 @@ export async function GET(req: NextRequest) {
   if (user.role !== "MENTOR") return forbidden();
 
   const now = new Date();
-  const weekStart = startOfThisWeekPKT(now);
 
   const activeCohortFilter = { isActive: true, endDate: { gte: now } };
 
   const [tasksPublishedThisWeek, linkedInPostsThisWeek, cohorts] = await Promise.all([
-    prisma.task.count({
-      where: {
-        state: "PUBLISHED",
-        createdAt: { gte: weekStart },
-        cohort: activeCohortFilter,
-      },
-    }),
-    prisma.linkedInPost.count({
-      where: {
-        loggedAt: { gte: weekStart },
-        membership: { cohort: activeCohortFilter },
-      },
-    }),
-    prisma.cohort.findMany({
+  prisma.task.count({
+    where: { state: "PUBLISHED" },
+  }),
+  prisma.linkedInPost.count(),
+  prisma.cohort.findMany({
       where: activeCohortFilter,
       orderBy: { startDate: "desc" },
       include: {
